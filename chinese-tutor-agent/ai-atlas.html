@@ -1084,10 +1084,10 @@ function saveSettings(){
 
 /* ===== MASCOT MÂY (inline SVG emoji-style, editorial) ===== */
 function MAY(variant){
-  // simple inline representation; designer asset có thể thay sau
-  const faces={default:'😊',wonder:'😮',sleep:'😴',point:'👉',walk:'🚶',lantern:'🏮'};
-  const f=faces[variant]||faces.default;
-  return `<span style="display:inline-block; position:relative">☁️<span style="position:absolute; left:50%; top:55%; transform:translate(-50%,-50%); font-size:.5em">${f}</span></span>`;
+  // Mascot MÂY — ảnh thật (đám mây đội nón lá, cầm cờ VN, đeo balo). Phục vụ tại /may-mascot.png.
+  // Kích thước render = 1em theo font-size của khối chứa (giữ tương thích các chỗ gọi cũ).
+  return `<img src="/may-mascot.png" alt="MÂY" class="may-mascot" style="height:1em;width:auto;vertical-align:middle;display:inline-block"
+    onerror="this.replaceWith(document.createTextNode('☁️'))">`;
 }
 
 /* ===== 10. INIT ===== */

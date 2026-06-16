@@ -6,7 +6,7 @@ from typing import Annotated
 
 from dotenv import load_dotenv
 from starlette.requests import Request
-from starlette.responses import HTMLResponse, PlainTextResponse, JSONResponse
+from starlette.responses import HTMLResponse, PlainTextResponse, JSONResponse, FileResponse
 from langchain_openai import ChatOpenAI
 from langchain_core.tools import tool
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
@@ -374,6 +374,16 @@ async def serve_chat_ui(request: Request):
     return _serve_file(_CHAT_HTML_PATH, "Thầy Trung chat. POST /invocations để chat.")
 
 
+_MASCOT_PATH = os.path.join(_HERE, "data", "may-mascot.png")
+
+
+async def serve_mascot(request: Request):
+    # Ảnh mascot MÂY (dùng trong AI ATLAS)
+    if os.path.exists(_MASCOT_PATH):
+        return FileResponse(_MASCOT_PATH, media_type="image/png")
+    return PlainTextResponse("mascot not found", status_code=404)
+
+
 # --- AI ATLAS: sinh câu i+1 qua qwen (có validator + fallback) ---
 async def lesson_endpoint(request: Request):
     """
@@ -437,6 +447,7 @@ Trả về DUY NHẤT JSON (không giải thích, không markdown fence):
 app.add_route("/", serve_atlas_ui, methods=["GET"])
 app.add_route("/atlas", serve_atlas_ui, methods=["GET"])
 app.add_route("/chat", serve_chat_ui, methods=["GET"])
+app.add_route("/may-mascot.png", serve_mascot, methods=["GET"])
 app.add_route("/lesson", lesson_endpoint, methods=["POST"])
 
 
