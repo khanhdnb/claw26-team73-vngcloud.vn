@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>AI ATLAS · 中国之旅</title>
+<style>
+/* ===== DESIGN SYSTEM (ui_brief) ===== */
+:root{
+  --navy:#0D1726; --red:#B33A2E; --gold:#D4B27A; --jade:#2D7466;
+  --ivory:#F7F2EA; --stone:#8E8576; --line:#E8DFD0;
+  --font-disp:"Inter Tight",Inter,-apple-system,system-ui,sans-serif;
+  --font-han:"Noto Serif SC",serif;
+  --font-body:Inter,-apple-system,system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:var(--font-body); background:#1a1a1a; color:var(--ivory);
+  display:flex; align-items:center; justify-content:center; min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+/* phone frame */
+#phone{
+  width:390px; height:844px; max-height:100vh; background:var(--ivory); color:var(--navy);
+  position:relative; overflow:hidden; display:flex; flex-direction:column;
+  box-shadow:0 20px 70px rgba(0,0,0,.6);
+}
+@media(max-width:430px){ #phone{ width:100vw; height:100vh; } }
+#statusbar{
+  height:44px; min-height:44px; display:flex; align-items:center; justify-content:space-between;
+  padding:0 22px; font-size:14px; font-weight:600; z-index:50; position:relative;
+}
+#statusbar .time{font-variant-numeric:tabular-nums}
+#statusbar .dots{letter-spacing:1px}
+#view{flex:1; overflow-y:auto; overflow-x:hidden; position:relative; -webkit-overflow-scrolling:touch}
+#view::-webkit-scrollbar{width:0}
+#tabbar{
+  height:64px; min-height:64px; display:flex; border-top:1px solid var(--line);
+  background:var(--ivory); z-index:50;
+}
+#tabbar.dark{background:var(--navy); border-top-color:rgba(255,255,255,.08)}
+#tabbar button{
+  flex:1; border:none; background:none; cursor:pointer; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:3px; font-size:9px; color:var(--stone);
+  font-family:var(--font-body); text-transform:uppercase; letter-spacing:.5px;
+}
+#tabbar button .ic{font-size:18px; line-height:1}
+#tabbar button.active{color:var(--red)}
+#tabbar.dark button{color:rgba(247,242,234,.45)}
+#tabbar.dark button.active{color:var(--gold)}
+
+/* shared atoms */
+.eyebrow{font-size:10px; letter-spacing:2.5px; text-transform:uppercase; font-weight:700}
+.eb-red{color:var(--red)} .eb-gold{color:var(--gold)} .eb-jade{color:var(--jade)} .eb-muted{color:var(--stone)}
+.h2{font-family:var(--font-disp); font-weight:800; letter-spacing:-1px; line-height:1.08}
+.han{font-family:var(--font-han); font-weight:700}
+.pin{font-style:italic; color:var(--stone); font-weight:500}
+.scr{padding:0 0 28px; min-height:100%}
+.pad{padding:0 24px}
+.btn{
+  display:block; width:100%; border:none; cursor:pointer; font-family:var(--font-body);
+  font-weight:700; font-size:15px; padding:16px; text-align:center; letter-spacing:.3px;
+}
+.btn-gold{background:var(--gold); color:var(--navy)}
+.btn-red{background:var(--red); color:var(--ivory)}
+.btn-ghost{background:transparent; border:1px solid currentColor}
+.btn-row{display:flex; gap:10px}
+.btn-row .btn{flex:1}
+.divider{height:1px; background:var(--line); margin:0}
+
+/* fade-in per screen */
+#view > .scr{animation:fade .4s ease}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* toast */
+#toast{
+  position:absolute; left:50%; bottom:84px; transform:translateX(-50%) translateY(20px);
+  background:var(--navy); color:var(--ivory); font-size:13px; font-weight:600;
+  padding:12px 20px; opacity:0; pointer-events:none; transition:.3s; z-index:100;
+  border-left:3px solid var(--gold); max-width:80%;
+}
+#toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+
+/* settings modal */
+#settingsModal{
+  position:absolute; inset:0; background:rgba(13,23,38,.92); z-index:200;
+  display:none; align-items:center; justify-content:center; padding:30px;
+}
+#settingsModal.open{display:flex}
+.modal-card{background:var(--ivory); color:var(--navy); width:100%; padding:26px; }
+.modal-card h3{font-family:var(--font-disp); font-size:20px; font-weight:800; margin-bottom:4px}
+.modal-card label{display:block; font-size:11px; text-transform:uppercase; letter-spacing:1px;
+  color:var(--stone); margin:16px 0 6px; font-weight:700}
+.modal-card input{width:100%; padding:12px; border:1px solid var(--line); font-size:14px;
+  font-family:var(--font-body); background:#fff}
+.modal-card input:focus{outline:none; border-color:var(--gold)}
+.modal-note{font-size:11px; color:var(--stone); margin-top:14px; line-height:1.5}
+
+/* clickable hanzi (audio) */
+.hz{font-family:var(--font-han); cursor:pointer}
+.hz.known{color:var(--jade)} .hz.newc{color:var(--gold); border-bottom:2px dotted var(--gold)}
+</style>
+</head>
+<body>
+<div id="phone">
+  <div id="statusbar"><span class="time">9:41</span><span class="dots">●●● ⓦ ▮</span></div>
+  <div id="view"></div>
+  <div id="tabbar"></div>
+  <div id="toast"></div>
+  <div id="settingsModal">
+    <div class="modal-card">
+      <h3>Cấu hình AI</h3>
+      <p style="font-size:12px;color:var(--stone)">Để trống = chế độ offline (câu mẫu). Có key = AI sinh câu i+1 thật.</p>
+      <label>Model</label>
+      <input id="cfgModel" placeholder="qwen (mặc định, qua server)">
+      <label>API Key (tùy chọn)</label>
+      <input id="cfgKey" type="password" placeholder="để trống nếu dùng server qwen">
+      <div class="btn-row" style="margin-top:20px">
+        <button class="btn btn-ghost" onclick="closeSettings()">Hủy</button>
+        <button class="btn btn-gold" onclick="saveSettings()">Lưu</button>
+      </div>
+      <p class="modal-note">Bảo mật: chế độ key trực tiếp chỉ hợp demo. Mặc định app gọi qwen qua server GreenNode (an toàn hơn).</p>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   AI ATLAS — logic_spec_for_claude.md implementation
+   ============================================================ */
+
+/* ===== 1. DATA MODELS ===== */
+const DICT = {
+  "山":{pin:"shān",vi:"núi",pic:"⛰️",rad:true}, "木":{pin:"mù",vi:"cây",pic:"🌳",rad:true},
+  "口":{pin:"kǒu",vi:"miệng",pic:"👄",rad:true}, "人":{pin:"rén",vi:"người",pic:"🧍",rad:true},
+  "水":{pin:"shuǐ",vi:"nước",pic:"💧",rad:true}, "火":{pin:"huǒ",vi:"lửa",pic:"🔥",rad:true},
+  "日":{pin:"rì",vi:"mặt trời",pic:"☀️",rad:true}, "月":{pin:"yuè",vi:"mặt trăng",pic:"🌙",rad:true},
+  "女":{pin:"nǚ",vi:"nữ",pic:"👩",rad:true}, "大":{pin:"dà",vi:"lớn",pic:"🙆",rad:true},
+  "心":{pin:"xīn",vi:"tim",pic:"❤️",rad:true},
+  "我":{pin:"wǒ",vi:"tôi"}, "爱":{pin:"ài",vi:"yêu/thích"}, "你":{pin:"nǐ",vi:"bạn"},
+  "好":{pin:"hǎo",vi:"tốt",comp:["女"]}, "茶":{pin:"chá",vi:"trà"}, "锅":{pin:"guō",vi:"nồi"},
+  "入":{pin:"rù",vi:"vào"}, "出":{pin:"chū",vi:"ra"}, "小":{pin:"xiǎo",vi:"nhỏ"},
+  "中":{pin:"zhōng",vi:"trung/giữa"}, "国":{pin:"guó",vi:"nước/quốc"},
+  "吃":{pin:"chī",vi:"ăn",comp:["口"]}, "喝":{pin:"hē",vi:"uống",comp:["口"]},
+  "辣":{pin:"là",vi:"cay"}, "钱":{pin:"qián",vi:"tiền"},
+  "林":{pin:"lín",vi:"rừng",comp:["木","木"],decode:true}, "明":{pin:"míng",vi:"sáng",comp:["日","月"],decode:true},
+  "炎":{pin:"yán",vi:"nóng/viêm",comp:["火","火"],decode:true}, "休":{pin:"xiū",vi:"nghỉ ngơi",comp:["人","木"],decode:true},
+  "品":{pin:"pǐn",vi:"phẩm/món",comp:["口","口","口"],decode:true}
+};
+const CITIES = {
+  chengdu:{name:"CHENGDU",cn:"成都",topic:"Ẩm thực",seed:["火","锅","辣","茶","吃","喝","水","口"],story:"Hẻm Chengdu, hơi nồi lẩu bốc lên giữa lồng đèn đỏ."},
+  shanghai:{name:"SHANGHAI",cn:"上海",topic:"Công việc",seed:["我","你","好","人","大","中","国","心"],story:"Skyline Phố Đông sau cơn mưa, đèn neon mờ trong sương."},
+  beijing:{name:"BEIJING",cn:"北京",topic:"Giao tiếp",seed:["你","好","我","吃","喝","口","人","大"],story:"Hutong xám sớm mai, mùi bánh bao nóng từ tiệm vỉa hè."},
+  hangzhou:{name:"HANGZHOU",cn:"杭州",topic:"Lối sống",seed:["水","月","山","木","女","好","茶"],story:"Hồ Tây phủ sương, thuyền nan chậm trôi qua cầu đá."},
+  xian:{name:"XI'AN",cn:"西安",topic:"Lịch sử · HSK",seed:["日","月","大","人","口","木","火","中"],story:"Tường thành vàng nâu lúc hoàng hôn, ngựa đất nung im lìm."},
+  guilin:{name:"GUILIN",cn:"桂林",topic:"Thiên nhiên",seed:["山","水","木","日","月","火"],story:"Núi đá karst nổi trên sông Li, thuyền tre lướt giữa mây."}
+};
+const SIGNS = {
+  chengdu:["火锅店","辣火锅","好吃"], shanghai:["入口","出口","中国"], beijing:["你好","我爱中国"],
+  hangzhou:["大山茶","水月"], xian:["明月","日月"], guilin:["林山水","山林"]
+};
+const DECODE_QUESTIONS = [
+  {char:"林",opts:["Rừng","Sông","Núi"],ans:0,hint:"Hai cây 木 đứng cạnh nhau → ?"},
+  {char:"明",opts:["Tối","Sáng","Lạnh"],ans:1,hint:"Mặt trời 日 + mặt trăng 月 cùng chiếu → ?"},
+  {char:"炎",opts:["Nóng","Mát","Ướt"],ans:0,hint:"Hai lửa 火 chồng lên nhau → ?"},
+  {char:"休",opts:["Chạy","Nghỉ ngơi","Ăn"],ans:1,hint:"Người 人 tựa cây 木 → ?"},
+  {char:"品",opts:["Phẩm/món","Cây","Sông"],ans:0,hint:"Ba miệng 口 nếm món → ?"}
+];
+const TONES = {
+  1:{label:"mā",name:"Thanh 1 · ngang cao",c:[0.85,0.85,0.85,0.85,0.85]},
+  2:{label:"má",name:"Thanh 2 · đi lên",c:[0.38,0.5,0.62,0.76,0.9]},
+  3:{label:"mǎ",name:"Thanh 3 · xuống rồi lên",c:[0.6,0.34,0.2,0.4,0.66]},
+  4:{label:"mà",name:"Thanh 4 · đi xuống",c:[0.92,0.72,0.5,0.3,0.12]}
+};
+const COMMON_TARGET=50, ENGINE_THRESHOLD=12;
+const CITY_COORDS={beijing:{x:228,y:80},xian:{x:160,y:135},shanghai:{x:265,y:175},chengdu:{x:110,y:175},hangzhou:{x:248,y:200},guilin:{x:180,y:240}};
+const CITY_ORDER=["chengdu","shanghai","beijing","hangzhou","xian","guilin"];
+
+/* ===== 2. STATE ===== */
+let S = {
+  city:null, known:new Set(),
+  cityProgress:{chengdu:0,shanghai:0,beijing:0,hangzhou:0,xian:0,guilin:0},
+  collected:new Set(), streak:7, xp:1240, decodeIdx:0, current:'onboard'
+};
+function loadState(){
+  try{ const r=JSON.parse(localStorage.getItem('aiatlas_state')); if(!r) return;
+    S.city=r.city; S.known=new Set(r.known||[]); S.cityProgress=r.cityProgress||S.cityProgress;
+    S.collected=new Set(r.collected||[]); S.streak=r.streak??7; S.xp=r.xp??1240;
+    S.decodeIdx=r.decodeIdx||0; S.current=r.current||'onboard';
+  }catch(e){}
+}
+function saveState(){
+  try{ localStorage.setItem('aiatlas_state', JSON.stringify({
+    city:S.city, known:[...S.known], cityProgress:S.cityProgress, collected:[...S.collected],
+    streak:S.streak, xp:S.xp, decodeIdx:S.decodeIdx, current:S.current
+  })); }catch(e){}
+}
+let CFG = loadCfg();
+function loadCfg(){ try{return JSON.parse(localStorage.getItem('aiatlas_cfg'))||{}}catch(e){return{}} }
+function saveCfg(){ localStorage.setItem('aiatlas_cfg', JSON.stringify(CFG)); }
+
+/* ===== tone local state ===== */
+let curTone=2, userContour=null, toneScore=null, toneSim=false, recording=false;
+let curSign=0;
+
+/* ===== utils ===== */
+const $=id=>document.getElementById(id);
+function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2400); }
+function pct(n,d){ return Math.min(99, Math.round(n/d*100)); }
+function speak(text){
+  if(!('speechSynthesis'in window))return;
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text); u.lang='zh-CN'; u.rate=0.85;
+  const v=speechSynthesis.getVoices().find(x=>/zh/i.test(x.lang)); if(v)u.voice=v;
+  speechSynthesis.speak(u);
+}
+
+/* ===== 3. ROUTER ===== */
+const TABS=[
+  {s:'atlas',ic:'🗺️',label:'Atlas'}, {s:'lesson',ic:'📖',label:'Học'},
+  {s:'tone',ic:'🎵',label:'Phát âm'}, {s:'camera',ic:'📷',label:'Thế giới'},
+  {s:'progress',ic:'🧭',label:'Hành trình'}
+];
+const DARK_SCREENS=new Set(['onboard','lesson','camera']);
+function render(){
+  const v=$('view');
+  switch(S.current){
+    case 'onboard': v.innerHTML=scrOnboard(); break;
+    case 'citypick': v.innerHTML=scrCityPick(); break;
+    case 'seed': v.innerHTML=scrSeed(); break;
+    case 'atlas': v.innerHTML=scrAtlas(); break;
+    case 'citydetail': v.innerHTML=scrCityDetail(); break;
+    case 'lesson': v.innerHTML=scrLessonShell(); maybeGenerate(); break;
+    case 'camera': v.innerHTML=scrCamera(); setTimeout(scanSign,30); break;
+    case 'tone': v.innerHTML=scrTone(); setTimeout(drawTone,30); break;
+    case 'decode': v.innerHTML=scrDecode(); break;
+    case 'progress': v.innerHTML=scrProgress(); break;
+  }
+  // phone chrome
+  const dark=DARK_SCREENS.has(S.current);
+  $('phone').style.background = dark?'var(--navy)':'var(--ivory)';
+  $('statusbar').style.color = dark?'var(--ivory)':'var(--navy)';
+  $('view').style.background = dark?'var(--navy)':'var(--ivory)';
+  renderTabbar();
+  v.scrollTop=0; saveState();
+}
+function renderTabbar(){
+  const tb=$('tabbar');
+  const hide = ['onboard','citypick','seed'].includes(S.current);
+  tb.style.display = hide?'none':'flex';
+  tb.className = DARK_SCREENS.has(S.current)?'dark':'';
+  if(hide){ tb.innerHTML=''; return; }
+  tb.innerHTML = TABS.map(t=>
+    `<button class="${S.current===t.s?'active':''}" onclick="go('${t.s}')">
+       <span class="ic">${t.ic}</span>${t.label}</button>`).join('');
+}
+function go(s){ S.current=s; render(); }
+
+/* ===== screens injected below (part 2) ===== */
+</script>
+<script>
+/* ============================================================
+   AI ATLAS — SCREENS + ENGINE + DSP (part 2)
+   ============================================================ */
+
+/* ---------- helpers shared by screens ---------- */
+function hanziSpan(ch, isKnown, isNew){
+  const cls = isNew?'newc':(isKnown?'known':'');
+  return `<span class="hz ${cls}" onclick="speak('${ch}')">${ch}</span>`;
+}
+function settingsGear(dark){
+  const col = dark?'var(--gold)':'var(--stone)';
+  return `<button onclick="openSettings()" style="position:absolute;top:8px;right:18px;background:none;border:none;color:${col};font-size:18px;cursor:pointer;z-index:10">⚙</button>`;
+}
+
+/* ===== 01 ONBOARD ===== */
+function scrOnboard(){
+  return `<div class="scr" style="background:
+      radial-gradient(circle at 85% 8%, rgba(179,58,46,.35), transparent 45%),
+      radial-gradient(circle at 12% 92%, rgba(212,178,122,.22), transparent 45%),
+      var(--navy); color:var(--ivory); display:flex; flex-direction:column;
+      min-height:100%; padding:56px 30px 36px; text-align:center; position:relative">
+    ${settingsGear(true)}
+    <div class="eyebrow eb-gold" style="letter-spacing:8px">A · I</div>
+    <div class="h2" style="font-size:74px; color:var(--ivory); margin-top:4px">ATLAS</div>
+    <div class="han" style="font-size:22px; color:var(--gold); letter-spacing:6px; margin-top:6px">中国之旅</div>
+    <div style="margin-top:40px; font-family:var(--font-disp); font-size:19px; line-height:1.5">
+      Read China, don't <span style="font-style:italic;color:var(--gold)">memorize</span> China.</div>
+    <div style="font-size:12px; color:rgba(247,242,234,.6); margin-top:10px">Đừng học thuộc. Hãy giải mã.</div>
+    <div style="flex:1; display:flex; align-items:center; justify-content:center; margin:24px 0">
+      <div style="width:170px; height:170px; border-radius:50%;
+        background:radial-gradient(circle, rgba(212,178,122,.30), transparent 65%);
+        display:flex; align-items:center; justify-content:center; font-size:96px">${MAY('default')}</div>
+    </div>
+    <div class="eyebrow eb-gold" style="margin-bottom:14px">Người dẫn đường của bạn · MÂY</div>
+    <button class="btn btn-gold" onclick="go('citypick')">Bắt đầu hành trình →</button>
+  </div>`;
+}
+
+/* ===== 02 CITY PICK ===== */
+function scrCityPick(){
+  const cards = CITY_ORDER.map(k=>{
+    const c=CITIES[k]; const p=S.cityProgress[k]||0;
+    const status = S.collected.has(k)?'In progress':(p>0?'In progress':'Chưa đặt chân');
+    return `<div onclick="pickCity('${k}')" style="position:relative; height:140px; cursor:pointer;
+        background:${POSTER(k)}; background-size:cover; background-position:center; margin-bottom:1px;
+        display:flex; align-items:flex-end">
+      <div style="position:absolute; inset:0; background:linear-gradient(transparent 30%, rgba(13,23,38,.85))"></div>
+      <div style="position:relative; display:flex; justify-content:space-between; align-items:flex-end; width:100%; padding:16px">
+        <div><div class="han" style="color:var(--gold); font-size:34px">${c.cn}</div>
+          <div class="h2" style="font-size:20px; color:var(--ivory)">${c.name}</div>
+          <div style="font-size:10px; color:rgba(247,242,234,.7); text-transform:uppercase; letter-spacing:1px">${c.topic}</div></div>
+        <div style="text-align:right"><div class="h2" style="color:var(--gold); font-size:22px">${p}%</div>
+          <div style="font-size:8px; color:rgba(247,242,234,.6); text-transform:uppercase">${status}</div></div>
+      </div></div>`;
+  }).join('');
+  return `<div class="scr">
+    <div class="pad" style="padding-top:24px; padding-bottom:18px">
+      <div class="eyebrow eb-red">Chương 01 · Chọn điểm đến</div>
+      <div class="h2" style="font-size:28px; margin-top:6px">Bạn muốn<br>du hành đâu trước?</div>
+      <div style="font-size:12px; color:var(--stone); margin-top:6px">6 thành phố · 6 bộ chữ Hán · 1 hành trình</div>
+    </div>
+    ${cards}
+    <div class="pad" style="margin-top:18px">
+      <button class="btn btn-red" id="cityCta" onclick="afterPick()" ${S.city?'':'disabled style="opacity:.4"'}>Khởi hành →</button>
+    </div></div>`;
+}
+function pickCity(k){
+  S.city=k;
+  document.querySelectorAll('#view [onclick^="pickCity"]').forEach(el=>el.style.outline='');
+  event.currentTarget.style.outline='2px solid var(--red)';
+  const cta=$('cityCta'); cta.disabled=false; cta.style.opacity='1';
+  toast(`Đã chọn ${CITIES[k].name}`);
+}
+function afterPick(){ if(!S.city)return; go('seed'); }
+
+/* ===== 03 SEED ===== */
+function scrSeed(){
+  const c=CITIES[S.city];
+  ['山','口','人'].forEach(x=>S.known.add(x));
+  const seeds=['山','口','人'].map(ch=>{const d=DICT[ch];
+    return `<div style="background:var(--ivory); border:1px solid var(--line); padding:14px; text-align:center; flex:1">
+      <div class="han" style="font-size:26px; color:var(--navy)">${hanziSpan(ch,true,false)}</div>
+      <div style="font-size:9px; color:var(--stone)">${d.pin} · ${d.vi}</div></div>`}).join('');
+  return `<div class="scr pad" style="padding-top:24px">
+    <div class="eyebrow eb-jade">Ngày 01 · Gieo hạt</div>
+    <div class="h2" style="font-size:26px; margin-top:6px">Chưa biết gì?<br>Bắt đầu từ hình.</div>
+    <div style="background:var(--navy); padding:24px; margin-top:20px; color:var(--ivory)">
+      <div class="eyebrow eb-gold">Cái này trông giống gì?</div>
+      <div style="display:flex; align-items:center; justify-content:center; gap:16px; margin:20px 0">
+        <span style="font-size:56px">⛰️</span><span style="color:var(--stone)">→</span>
+        <span class="han" style="font-size:72px; color:var(--gold)" onclick="speak('山')">山</span></div>
+      <div style="text-align:center; font-size:13px"><span class="han">山</span> = núi · <span class="pin" style="color:var(--gold)">shān</span></div>
+      <div style="border-top:1px solid var(--jade); margin-top:18px; padding-top:12px; text-align:center;
+        font-size:12px; color:var(--jade)">✓ Bạn vừa đọc được chữ Hán đầu tiên</div>
+    </div>
+    <div class="eyebrow eb-muted" style="margin-top:22px">Hạt giống đã trồng</div>
+    <div style="display:flex; gap:8px; margin-top:10px">${seeds}</div>
+    <div style="background:var(--red); padding:18px; margin-top:22px; color:var(--ivory); text-align:center">
+      <div style="font-size:11px; opacity:.85">Cuối hôm nay bạn đọc được</div>
+      <div class="han" style="font-size:28px; letter-spacing:4px; margin:6px 0">入口</div>
+      <div style="font-size:11px; opacity:.85">rù kǒu · biển ở sân bay Phố Đông</div></div>
+    <button class="btn btn-ghost" style="margin-top:22px; color:var(--navy)" onclick="finishSeed()">Vào Atlas →</button>
+  </div>`;
+}
+function finishSeed(){
+  CITIES[S.city].seed.forEach(c=>S.known.add(c));
+  S.collected.add(S.city);
+  S.cityProgress[S.city]=Math.min(99,Math.round(S.known.size/12*100));
+  toast('Hành trình bắt đầu!'); go('atlas');
+}
+
+/* ===== 04 ATLAS ===== */
+function scrAtlas(){
+  const c=CITIES[S.city]||CITIES.chengdu;
+  // build SVG map
+  const nodes=CITY_ORDER.map(k=>{
+    const co=CITY_COORDS[k]; const isCur=k===S.city; const isVis=S.collected.has(k)&&!isCur;
+    const r=isCur?7:(isVis?5:4); const fill=isCur?'var(--red)':(isVis?'var(--gold)':'rgba(212,178,122,.3)');
+    const ring=isCur?`<circle cx="${co.x}" cy="${co.y}" r="13" fill="none" stroke="var(--red)" stroke-width="1.5" opacity=".6"><animate attributeName="r" values="9;16;9" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values=".6;0;.6" dur="2s" repeatCount="indefinite"/></circle>`:'';
+    const lblColor=isCur?'var(--ivory)':(isVis?'var(--gold)':'rgba(212,178,122,.4)');
+    return `${ring}<circle cx="${co.x}" cy="${co.y}" r="${r}" fill="${fill}" style="cursor:pointer" onclick="visitCity('${k}')"/>
+      <text x="${co.x+11}" y="${co.y+4}" fill="${lblColor}" font-size="9" font-family="Inter">${CITIES[k].name}</text>`;
+  }).join('');
+  // dashed line current↔visited
+  let lines='';
+  S.collected.forEach(k=>{ if(k!==S.city){const a=CITY_COORDS[S.city],b=CITY_COORDS[k];
+    lines+=`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="var(--gold)" stroke-width="1" stroke-dasharray="3 3" opacity=".5"/>`}});
+  const mini = CITY_ORDER.filter(k=>k!==S.city).map(k=>{const cc=CITIES[k];const p=S.cityProgress[k]||0;
+    return `<div onclick="visitCity('${k}')" style="position:relative; height:110px; cursor:pointer; background:${POSTER(k)}; background-size:cover; background-position:center; display:flex; align-items:flex-end">
+      <div style="position:absolute; inset:0; background:linear-gradient(transparent 40%, rgba(13,23,38,.82))"></div>
+      <div style="position:relative; padding:10px"><div class="han" style="color:var(--gold); font-size:18px">${cc.cn}</div>
+        <div style="font-size:9px; color:var(--ivory); font-weight:700">${cc.name} · ${p}%</div></div></div>`}).join('');
+  return `<div class="scr">
+    <div class="pad" style="padding-top:22px; display:flex; justify-content:space-between; align-items:flex-start">
+      <div><div class="eyebrow eb-red">Chương · Atlas</div>
+        <div class="h2" style="font-size:26px; margin-top:4px">Khám phá<br>Trung Quốc cùng AI</div></div>
+      <div style="background:var(--navy); color:var(--gold); font-size:12px; font-weight:700; padding:6px 12px">🔥 ${S.streak} ngày</div>
+    </div>
+    <div style="background:var(--navy); margin-top:18px; padding:10px">
+      <svg viewBox="0 0 320 280" style="width:100%; height:auto">
+        <path d="M90,60 Q200,40 270,90 Q300,160 250,230 Q160,270 90,230 Q50,150 90,60 Z" fill="none" stroke="var(--gold)" stroke-width="1" stroke-dasharray="4 4" opacity=".4"/>
+        ${lines}${nodes}
+      </svg>
+      <div style="display:flex; gap:16px; justify-content:center; padding:8px 0 4px; font-size:9px; color:rgba(247,242,234,.6)">
+        <span><span style="color:var(--red)">●</span> Hiện tại</span>
+        <span><span style="color:var(--gold)">●</span> Đã ghé</span>
+        <span><span style="color:rgba(212,178,122,.4)">●</span> Chưa khám phá</span></div>
+    </div>
+    <div class="pad"><div onclick="go('citydetail')" style="background:var(--ivory); border:1px solid var(--line); margin-top:18px; padding:18px; display:flex; align-items:center; justify-content:space-between; cursor:pointer">
+      <div style="display:flex; align-items:center; gap:14px">
+        <div class="han" style="color:var(--red); font-size:38px">${c.cn}</div>
+        <div><div class="eyebrow eb-muted">Thành phố hiện tại</div>
+          <div class="h2" style="font-size:18px">${c.name}</div>
+          <div style="font-size:11px; color:var(--stone)">${c.topic} · ${S.cityProgress[S.city]||0}% hành trình</div></div></div>
+      <div style="color:var(--red); font-size:22px">›</div></div></div>
+    <div class="pad"><div class="eyebrow eb-muted" style="margin:20px 0 10px">Các thành phố khác</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:2px">${mini}</div></div>
+  </div>`;
+}
+function visitCity(k){ S.city=k; if(!S.collected.has(k)){S.collected.add(k); CITIES[k].seed.forEach(c=>S.known.add(c)); S.cityProgress[k]=Math.max(S.cityProgress[k]||0, pct(S.known.size,12));} go('citydetail'); }
+
+/* ===== 05 CITY DETAIL ===== */
+function scrCityDetail(){
+  const c=CITIES[S.city]||CITIES.chengdu;
+  const rads=[...S.known].filter(x=>DICT[x]?.rad);
+  const chars=[...S.known].filter(x=>DICT[x]&&!DICT[x].rad);
+  const strokes=8;
+  return `<div class="scr">
+    <div style="position:relative; height:320px; background:${POSTER(S.city)}; background-size:cover; background-position:center; display:flex; align-items:flex-end">
+      <div style="position:absolute; inset:0; background:linear-gradient(transparent 20%, rgba(13,23,38,.92))"></div>
+      <div style="position:relative; padding:24px">
+        <div class="eyebrow eb-gold">Bài học hôm nay</div>
+        <div class="han" style="color:var(--gold); font-size:14px; letter-spacing:3px; margin:6px 0">${c.cn}</div>
+        <div class="h2" style="font-size:50px; color:var(--ivory); letter-spacing:-2px; line-height:.95">LOST IN<br>${c.name}</div>
+        <div style="font-style:italic; font-size:12px; color:rgba(247,242,234,.85); margin-top:10px; max-width:280px">${c.story}</div></div></div>
+    <div style="background:var(--navy); display:flex; color:var(--ivory)">
+      ${[[strokes,'Nét'],[rads.length,'Bộ thủ'],[chars.length,'Chữ'],[(S.cityProgress[S.city]||0)+'%','Hành trình']].map(([n,l])=>
+        `<div style="flex:1; padding:16px 4px; text-align:center; border-right:1px solid rgba(255,255,255,.07)">
+          <div class="h2" style="color:var(--gold); font-size:22px">${n}</div>
+          <div style="font-size:9px; color:var(--stone); text-transform:uppercase">${l}</div></div>`).join('')}</div>
+    <div class="pad" style="padding-top:20px">
+      <div class="eyebrow eb-red">Đồ thị thành phần của bạn</div>
+      <div style="background:var(--navy); margin-top:10px; padding:16px"><svg viewBox="0 0 320 150" style="width:100%">
+        ${compGraph(rads,chars)}
+      </svg></div>
+      <div class="btn-row" style="margin-top:20px">
+        <button class="btn btn-ghost" style="color:var(--navy)" onclick="go('atlas')">← Atlas</button>
+        <button class="btn btn-gold" onclick="go('lesson')">Tiếp tục hành trình →</button></div>
+    </div></div>`;
+}
+function compGraph(rads,chars){
+  let s='';
+  const strokeXs=[40,90,140,190,240,280];
+  strokeXs.forEach((x,i)=> s+=`<circle cx="${x}" cy="25" r="5" fill="var(--ivory)"/>`);
+  rads.slice(0,6).forEach((r,i)=>{ const x=50+i*45; s+=`<line x1="${x}" y1="30" x2="${x}" y2="70" stroke="rgba(212,178,122,.3)" stroke-width="1"/><circle cx="${x}" cy="75" r="7" fill="var(--gold)"/><text x="${x}" y="79" text-anchor="middle" font-size="8" fill="var(--navy)" font-family="Noto Serif SC">${r}</text>`;});
+  chars.slice(0,5).forEach((ch,i)=>{ const x=60+i*55; s+=`<line x1="${x}" y1="82" x2="${x}" y2="120" stroke="rgba(179,58,46,.3)" stroke-width="1"/><circle cx="${x}" cy="125" r="8" fill="var(--red)"/><text x="${x}" y="129" text-anchor="middle" font-size="9" fill="var(--ivory)" font-family="Noto Serif SC">${ch}</text>`;});
+  return s;
+}
+
+/* ===== 06 LESSON ===== */
+function scrLessonShell(){
+  const c=CITIES[S.city]||CITIES.chengdu;
+  return `<div class="scr" style="background:${POSTER(S.city)}; background-size:cover; background-position:center; min-height:100%; position:relative; color:var(--ivory)">
+    <div style="position:absolute; inset:0; background:linear-gradient(rgba(13,23,38,.55), rgba(13,23,38,.95))"></div>
+    <div style="position:relative; padding:24px; min-height:100%; display:flex; flex-direction:column">
+      ${settingsGear(true)}
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px">
+        <span class="eyebrow eb-gold">${c.name} · ${c.topic.toUpperCase()}</span>
+        <span style="background:var(--navy); color:var(--gold); font-size:10px; font-weight:700; padding:4px 10px">✦ AI i+1</span></div>
+      <div id="lessonBody" style="flex:1; display:flex; flex-direction:column; justify-content:center; padding:30px 0">
+        <div style="text-align:center; color:rgba(247,242,234,.7)">
+          <div style="font-size:40px; margin-bottom:10px">${MAY('sleep')}</div>
+          <div style="font-size:13px">MÂY đang soạn câu cho bạn…</div></div></div>
+      <div class="btn-row">
+        <button class="btn btn-ghost" style="color:var(--ivory)" onclick="go('lesson')">↻ Câu khác</button>
+        <button class="btn btn-gold" onclick="go('camera')">Đọc ngoài đời →</button></div>
+    </div></div>`;
+}
+function renderLesson(d){
+  const body=$('lessonBody'); if(!body)return;
+  const c=CITIES[S.city]||CITIES.chengdu;
+  const hz=[...d.hanzi].map(ch=>{ const isNew=ch===d.newChar; const known=S.known.has(ch)&&!isNew;
+    return `<span class="hz ${isNew?'newc':'known'}" onclick="speak('${ch}')" style="color:${isNew?'var(--gold)':'var(--ivory)'}">${ch}</span>`}).join(' ');
+  const total=[...d.hanzi].length, known=total-1;
+  body.innerHTML=`
+    <div class="eyebrow eb-gold">Bài học sinh tại chỗ</div>
+    <div class="h2" style="font-size:44px; color:var(--ivory); letter-spacing:-2px; line-height:.95; margin:6px 0">LOST IN<br>${c.name}</div>
+    <div class="divider" style="background:rgba(247,242,234,.25); margin:18px 0"></div>
+    <div class="han" style="font-size:38px; letter-spacing:4px; text-align:center">${hz}</div>
+    <div class="pin" style="color:var(--gold); font-size:15px; text-align:center; margin-top:10px">${esc(d.pinyin)}</div>
+    <div style="font-size:13px; color:var(--ivory); text-align:center; margin-top:6px">${esc(d.vi)}</div>
+    <div style="background:rgba(247,242,234,.08); border:1px solid var(--gold); padding:12px 14px; margin-top:22px; display:flex; gap:12px; align-items:flex-start">
+      <div style="font-size:40px; line-height:1">${MAY('point')}</div>
+      <div><div class="eyebrow eb-gold">MÂY · HƯỚNG DẪN</div>
+        <div style="font-size:12px; color:rgba(247,242,234,.9); margin-top:4px">${esc(d.story)} Đừng học thuộc <span class="han" style="color:var(--gold)">${d.newChar}</span> — hãy cảm bối cảnh.</div></div></div>
+    <div style="background:rgba(45,116,102,.25); border-left:3px solid var(--jade); padding:12px 14px; margin-top:12px; font-size:13px">
+      ✓ Bạn đọc được <b>${known}/${total} chữ</b> — chỉ <span class="han" style="color:var(--gold)">${d.newChar}</span> (${esc(d.newPin)} · ${esc(d.newVi)}) là mới.</div>`;
+}
+
+/* ===== 07 CAMERA ===== */
+function scrCamera(){
+  const signs=SIGNS[S.city]||SIGNS.chengdu;
+  const tags=signs.map((s,i)=>`<span onclick="pickSign(${i})" style="cursor:pointer; padding:8px 12px; font-size:13px; font-family:var(--font-han);
+    ${i===curSign?'background:var(--gold); color:var(--navy)':'border:1px solid var(--gold); color:var(--gold)'}">${s}</span>`).join('');
+  return `<div class="scr" style="background:#0a0a0a; min-height:100%; color:var(--ivory); position:relative; padding:50px 24px 24px">
+    ${settingsGear(true)}
+    <div style="text-align:center; margin-bottom:16px">
+      <span style="color:var(--red); font-size:11px; font-weight:700">● LIVE</span>
+      <span class="eyebrow eb-gold" style="margin-left:8px">Đọc thế giới · ${(CITIES[S.city]||CITIES.chengdu).name}</span></div>
+    <input id="signInput" value="${signs[curSign]||''}" oninput="scanSign()"
+      style="width:100%; background:rgba(247,242,234,.08); border:1px solid var(--gold); color:var(--ivory);
+      font-family:var(--font-han); font-size:22px; text-align:center; letter-spacing:4px; padding:14px">
+    <div style="display:flex; gap:8px; justify-content:center; margin-top:14px">${tags}</div>
+    <div style="border:2px solid var(--gold); padding:32px 16px; margin-top:22px; text-align:center">
+      <div id="signRow" class="han" style="font-size:48px; letter-spacing:8px"></div></div>
+    <div id="scanResult" style="background:rgba(247,242,234,.06); border-left:3px solid var(--gold); padding:14px; margin-top:18px; font-size:13px; min-height:20px"></div>
+    <div style="display:flex; justify-content:center; margin-top:28px">
+      <div onclick="nextSign()" style="width:64px; height:64px; border-radius:50%; border:5px solid rgba(247,242,234,.3); background:var(--ivory); cursor:pointer"></div></div>
+  </div>`;
+}
+function pickSign(i){ curSign=i; const signs=SIGNS[S.city]||SIGNS.chengdu; $('signInput').value=signs[i]; scanSign(); }
+function nextSign(){ const signs=SIGNS[S.city]||SIGNS.chengdu; curSign=(curSign+1)%signs.length; pickSign(curSign); }
+function scanSign(){
+  const v=$('signInput'); if(!v)return;
+  const chars=[...v.value.trim()].filter(c=>c.trim());
+  let known=0;
+  const rendered=chars.map(c=>{ const k=S.known.has(c); if(k)known++;
+    return `<span class="hz ${k?'known':'newc'}" onclick="speak('${c}')">${c}</span>`}).join('');
+  const unknown=chars.filter(c=>!S.known.has(c));
+  $('signRow').innerHTML=rendered;
+  $('scanResult').innerHTML = chars.length
+    ? `<div>Bạn đọc được <span style="color:var(--jade); font-weight:700">${known}/${chars.length}</span></div>
+       <div style="color:var(--stone); margin-top:4px">${known===chars.length?'🎉 Đọc trọn vẹn tấm biển này.':`Chữ mới: ${unknown.map(c=>`<b style="color:var(--gold)">${c}</b>`).join(', ')} — chạm để học.`}</div>`
+    : '';
+}
+
+/* ===== 08 TONE (DSP) ===== */
+function scrTone(){
+  const t=TONES[curTone];
+  const toneBtns=Object.entries(TONES).map(([k,v])=>
+    `<button onclick="pickTone(${k})" style="flex:1; padding:12px; cursor:pointer; font-family:var(--font-han); font-size:18px;
+      ${+k===curTone?'border:1px solid var(--gold); background:rgba(212,178,122,.15); color:var(--gold)':'border:1px solid rgba(255,255,255,.15); background:none; color:var(--ivory)'}">${v.label}</button>`).join('');
+  const scoreBlock = toneScore!=null
+    ? `<div style="text-align:center; margin-top:16px"><div class="h2" style="color:var(--gold); font-size:38px">${toneScore}/100</div>
+       <div class="eyebrow" style="color:var(--ivory)">${toneScore>=80?'Tuyệt vời':toneScore>=60?'Khá tốt':'Thử lại nhé'}</div>
+       ${toneSim?'<div style="font-size:9px;color:var(--stone);margin-top:4px">(mô phỏng — micro bị từ chối)</div>':''}</div>` : '';
+  return `<div class="scr pad" style="padding-top:24px">
+    <div class="eyebrow eb-red">AI Acoustics · Real-time</div>
+    <div class="h2" style="font-size:26px; margin-top:6px">Luyện thanh điệu</div>
+    <div style="font-size:12px; color:var(--stone); margin-top:6px">Điểm yếu số 1 của người học. AI nghe cao độ giọng bạn — và sửa ngay.</div>
+    <div style="background:var(--navy); padding:24px; margin-top:20px; color:var(--ivory)">
+      <div class="han" style="font-size:54px; text-align:center; color:var(--gold)" onclick="speak('${t.label.replace(/[āáǎàēéěè...]/g,'a')}')">${t.label}</div>
+      <div class="eyebrow" style="text-align:center; color:rgba(247,242,234,.7); margin-top:4px">${t.name}</div>
+      <div style="display:flex; gap:6px; margin-top:16px">${toneBtns}</div>
+      <canvas id="tonecv" width="320" height="140" style="width:100%; height:140px; margin-top:16px"></canvas>
+      <div style="display:flex; gap:16px; justify-content:center; font-size:9px; color:var(--stone)">
+        <span>┄┄ Mẫu chuẩn</span><span style="color:var(--gold)">━━ Giọng bạn</span></div>
+      ${scoreBlock}
+    </div>
+    <button class="btn btn-red" id="recBtn" onclick="recordTone()" style="margin-top:18px">${recording?'● ĐANG NGHE…':`🎤 NHẤN ĐỂ NÓI '${t.label}'`}</button>
+    <div style="font-size:10px; color:var(--stone); margin-top:10px; text-align:center">AI phát hiện cao độ real-time qua autocorrelation.</div>
+  </div>`;
+}
+function pickTone(k){ curTone=k; userContour=null; toneScore=null; render(); }
+
+function autoCorrelate(buf, sampleRate){
+  let SIZE=buf.length, rms=0;
+  for(let i=0;i<SIZE;i++) rms+=buf[i]*buf[i];
+  rms=Math.sqrt(rms/SIZE); if(rms<0.01) return -1;
+  let r1=0,r2=SIZE-1,thres=0.2;
+  for(let i=0;i<SIZE/2;i++) if(Math.abs(buf[i])<thres){r1=i;break;}
+  for(let i=1;i<SIZE/2;i++) if(Math.abs(buf[SIZE-i])<thres){r2=SIZE-i;break;}
+  buf=buf.slice(r1,r2); SIZE=buf.length;
+  const c=new Array(SIZE).fill(0);
+  for(let i=0;i<SIZE;i++) for(let j=0;j<SIZE-i;j++) c[i]+=buf[j]*buf[j+i];
+  let d=0; while(d<SIZE-1 && c[d]>c[d+1]) d++;
+  let maxv=-1,maxp=-1;
+  for(let i=d;i<SIZE;i++) if(c[i]>maxv){maxv=c[i];maxp=i;}
+  if(maxp<=0) return -1;
+  const f=sampleRate/maxp;
+  return (f>70&&f<500)?f:-1;
+}
+async function recordTone(){
+  if(recording)return;
+  recording=true; render();
+  let frames=[];
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    const ac=new (window.AudioContext||window.webkitAudioContext)();
+    const src=ac.createMediaStreamSource(stream);
+    const an=ac.createAnalyser(); an.fftSize=2048; src.connect(an);
+    const buf=new Float32Array(an.fftSize); const start=performance.now();
+    await new Promise(res=>{(function tick(){
+      an.getFloatTimeDomainData(buf);
+      const f=autoCorrelate(buf,ac.sampleRate); if(f>0)frames.push(f);
+      if(performance.now()-start<1400) requestAnimationFrame(tick); else res();
+    })();});
+    stream.getTracks().forEach(t=>t.stop()); ac.close(); toneSim=false;
+  }catch(e){ toneSim=true; frames=simulateFrames(); }
+  finishTone(frames);
+}
+function simulateFrames(){
+  const tc=TONES[curTone].c, out=[];
+  for(let i=0;i<40;i++){ const p=i/39*(tc.length-1); const lo=Math.floor(p);
+    const v=tc[lo]+(tc[Math.min(lo+1,tc.length-1)]-tc[lo])*(p-lo);
+    out.push(120+v*120+(Math.random()-0.5)*22); }
+  return out;
+}
+function finishTone(freqs){
+  recording=false;
+  freqs=freqs.filter(f=>f>0);
+  if(freqs.length<5){ userContour=null; toneScore=0; render(); return; }
+  const N=5, bucket=[];
+  for(let i=0;i<N;i++){ const a=Math.floor(freqs.length*i/N), b=Math.floor(freqs.length*(i+1)/N);
+    const seg=freqs.slice(a,b); bucket.push(seg.reduce((x,y)=>x+y,0)/seg.length); }
+  const logs=bucket.map(f=>Math.log2(f)); const mn=Math.min(...logs),mx=Math.max(...logs); const range=mx-mn;
+  userContour = range<0.06 ? bucket.map(()=>0.85) : logs.map(l=>(l-mn)/range);
+  const tc=TONES[curTone].c; const tVar=variance(tc);
+  if(tVar<0.005) toneScore=Math.round(Math.max(0,100-variance(userContour)*900));
+  else toneScore=Math.round(Math.max(0,pearson(userContour,tc))*100);
+  toneScore=Math.max(0,Math.min(100,toneScore));
+  render();
+}
+function variance(a){ const m=a.reduce((x,y)=>x+y,0)/a.length; return a.reduce((s,v)=>s+(v-m)**2,0)/a.length; }
+function pearson(a,b){ const n=a.length; const ma=a.reduce((x,y)=>x+y,0)/n, mb=b.reduce((x,y)=>x+y,0)/n;
+  let num=0,da=0,db=0; for(let i=0;i<n;i++){num+=(a[i]-ma)*(b[i]-mb); da+=(a[i]-ma)**2; db+=(b[i]-mb)**2;}
+  return (da&&db)?num/Math.sqrt(da*db):0; }
+function drawTone(){
+  const cv=$('tonecv'); if(!cv)return; const ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height; ctx.clearRect(0,0,W,H);
+  const tc=TONES[curTone].c;
+  const toX=i=>20+i/(tc.length-1)*(W-40);
+  const toY=v=>H-20-v*(H-40);
+  // target dashed
+  ctx.setLineDash([10,8]); ctx.strokeStyle='rgba(247,242,234,.5)'; ctx.lineWidth=4; ctx.beginPath();
+  tc.forEach((v,i)=>{ const x=toX(i),y=toY(v); i?ctx.lineTo(x,y):ctx.moveTo(x,y); }); ctx.stroke();
+  // user solid
+  if(userContour){ ctx.setLineDash([]); ctx.strokeStyle='#D4B27A'; ctx.lineWidth=5; ctx.lineJoin='round'; ctx.beginPath();
+    userContour.forEach((v,i)=>{ const x=toX(i),y=toY(v); i?ctx.lineTo(x,y):ctx.moveTo(x,y); }); ctx.stroke();
+    ctx.fillStyle='#D4B27A'; userContour.forEach((v,i)=>{ ctx.beginPath(); ctx.arc(toX(i),toY(v),4,0,7); ctx.fill(); });
+  }
+}
+
+/* ===== 09 DECODE ===== */
+function scrDecode(){
+  const q=DECODE_QUESTIONS[S.decodeIdx%DECODE_QUESTIONS.length];
+  const comps=(DICT[q.char]?.comp||[]).map(c=>`<div style="border:1px solid var(--gold); padding:8px 12px; text-align:center">
+    <div class="han" style="color:var(--gold); font-size:22px">${c}</div><div style="font-size:9px; color:var(--stone)">${DICT[c]?.vi||''}</div></div>`).join('<span style="color:var(--gold); font-size:20px">+</span>');
+  const opts=q.opts.map((o,i)=>`<div id="dopt${i}" onclick="answerDecode(${i})" style="background:var(--ivory); border:1px solid var(--line); padding:14px; margin-bottom:8px; cursor:pointer; display:flex; align-items:center; gap:12px">
+    <span style="width:24px; height:24px; border:1px solid var(--stone); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700">${'ABC'[i]}</span>
+    <span style="font-size:14px">${o}</span></div>`).join('');
+  return `<div class="scr pad" style="padding-top:24px">
+    <div class="eyebrow eb-red">Giải mã · Decoding</div>
+    <div class="h2" style="font-size:26px; margin-top:6px">Đoán nghĩa<br>từ bộ thủ</div>
+    <div style="background:var(--navy); padding:24px; margin-top:20px; color:var(--ivory)">
+      <div class="eyebrow eb-gold" style="text-align:center">Chữ mới</div>
+      <div class="han" style="font-size:90px; text-align:center; color:var(--gold)" onclick="speak('${q.char}')">${q.char}</div>
+      <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-top:14px">${comps}</div>
+      <div style="background:rgba(247,242,234,.08); border-left:3px solid var(--gold); padding:12px; margin-top:18px; display:flex; gap:10px; align-items:center">
+        <span style="font-size:28px">${MAY('point')}</span>
+        <div style="font-size:12px"><b style="color:var(--gold)">MÂY:</b> ${q.hint}</div></div>
+    </div>
+    <div style="text-align:center; font-size:15px; margin:18px 0">Vậy <span class="han" style="color:var(--red)">${q.char}</span> nghĩa là gì?</div>
+    ${opts}
+  </div>`;
+}
+function answerDecode(i){
+  const q=DECODE_QUESTIONS[S.decodeIdx%DECODE_QUESTIONS.length];
+  const el=$('dopt'+i);
+  if(i===q.ans){ el.style.borderColor='var(--jade)'; el.style.background='rgba(45,116,102,.12)';
+    S.known.add(q.char); S.xp+=20; toast(`+20 XP · Đọc được ${q.char}`); }
+  else{ el.style.borderColor='var(--red)'; el.style.background='rgba(179,58,46,.1)';
+    const ok=$('dopt'+q.ans); ok.style.borderColor='var(--jade)'; ok.style.background='rgba(45,116,102,.12)'; }
+  setTimeout(()=>{ S.decodeIdx++; render(); },1500);
+}
+
+/* ===== 10 PROGRESS ===== */
+function scrProgress(){
+  const p=pct(S.known.size,COMMON_TARGET);
+  const rads=[...S.known].filter(c=>DICT[c]?.rad).length;
+  const chars=[...S.known].filter(c=>DICT[c]&&!DICT[c].rad).length;
+  const ring=`<svg viewBox="0 0 100 100" style="width:96px; height:96px"><circle cx="50" cy="50" r="42" fill="none" stroke="rgba(247,242,234,.15)" stroke-width="8"/><circle cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="8" stroke-dasharray="${p/100*264} 264" stroke-linecap="round" transform="rotate(-90 50 50)"/></svg>`;
+  const cityGrid=CITY_ORDER.map(k=>{const cc=CITIES[k]; const got=S.collected.has(k);
+    return `<div style="padding:14px; text-align:center; ${got?'background:var(--gold); color:var(--navy)':'background:var(--ivory); border:1px solid var(--line); color:var(--stone)'}">
+      <div class="han" style="font-size:20px; color:${got?'var(--red)':'var(--stone)'}">${cc.cn}</div>
+      <div style="font-size:11px; font-weight:700">${cc.name}</div>
+      <div style="font-size:10px">${S.cityProgress[k]||0}%</div></div>`}).join('');
+  const stats=[['🔥 '+S.streak,'Streak'],[S.xp,'XP'],[S.known.size,'Đã thuộc'],[rads,'Bộ thủ'],[chars,'Chữ'],[S.collected.size+'/6','Thành phố']]
+    .map(([n,l])=>`<div style="text-align:center; padding:14px 4px"><div class="h2" style="color:var(--gold); font-size:22px">${n}</div><div style="font-size:9px; color:var(--stone); text-transform:uppercase">${l}</div></div>`).join('');
+  return `<div class="scr pad" style="padding-top:24px">
+    <div class="eyebrow eb-red">Hành trình của bạn</div>
+    <div class="h2" style="font-size:24px; margin-top:6px">Bạn đang đọc<br>được bao nhiêu<br>phần thế giới?</div>
+    <div style="background:var(--navy); padding:22px; margin-top:18px; color:var(--ivory); display:flex; gap:18px; align-items:center">
+      <div style="position:relative">${ring}<div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center"><div class="h2" style="color:var(--gold); font-size:22px">${p}%</div><div style="font-size:8px; color:var(--stone)">thường gặp</div></div></div>
+      <div><div class="eyebrow eb-gold">Cấp 3 · Nhà thám hiểm</div>
+        <div style="font-size:13px; margin-top:6px">Bạn đọc được ${p}% chữ Hán thường gặp ở 6 thành phố này.</div>
+        <div style="font-size:11px; color:var(--stone); margin-top:6px">Mở khóa bộ thủ → tăng %</div></div></div>
+    <div class="eyebrow eb-muted" style="margin:20px 0 10px">Bộ sưu tập thành phố</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:2px">${cityGrid}</div>
+    <div style="background:var(--navy); display:grid; grid-template-columns:1fr 1fr 1fr; margin-top:18px">${stats}</div>
+    <button class="btn btn-ghost" style="color:var(--navy); margin-top:20px" onclick="go('decode')">🧩 Luyện giải mã</button>
+  </div>`;
+}
+
+/* ===== 5. AI ENGINE i+1 ===== */
+async function maybeGenerate(){
+  let data=null;
+  try{ data=await genLesson(); }catch(e){ console.warn('gen failed, fallback', e); }
+  if(!data) data=genLocal();
+  // validator: chữ ∈ known ∪ {newChar}
+  const valid=[...data.hanzi].every(ch=>S.known.has(ch)||ch===data.newChar);
+  if(!valid){ console.warn('validator failed → local'); data=genLocal(); }
+  if(!DICT[data.newChar]) DICT[data.newChar]={pin:data.newPin,vi:data.newVi};
+  S.known.add(data.newChar);
+  S.cityProgress[S.city]=Math.min(99,(S.cityProgress[S.city]||0)+3);
+  renderLesson(data); saveState();
+}
+async function genLesson(){
+  // nếu user nhập key riêng → gọi thẳng Anthropic (spec gốc); else → server qwen
+  if(CFG.key) return genLLMAnthropic();
+  if(S.known.size<ENGINE_THRESHOLD) return null; // dùng template khi vốn còn ít
+  return genLLMServer();
+}
+async function genLLMServer(){
+  const c=CITIES[S.city];
+  const knownArr=[...S.known].filter(ch=>!DICT[ch]?.rad);
+  // timeout 7s — qwen reasoning có thể chậm; quá thì fallback genLocal ngay (UI không treo)
+  const ctrl=new AbortController(); const tid=setTimeout(()=>ctrl.abort(),7000);
+  try{
+    const r=await fetch('/lesson',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({city:c.name,topic:c.topic,known:knownArr.join(''),story:c.story}), signal:ctrl.signal});
+    if(!r.ok) throw new Error('server '+r.status);
+    const j=await r.json();
+    if(j.status!=='success'||!j.data) throw new Error('no data');
+    return j.data;
+  } finally { clearTimeout(tid); }
+}
+async function genLLMAnthropic(){
+  const c=CITIES[S.city];
+  const knownArr=[...S.known].filter(ch=>!DICT[ch]?.rad);
+  const prompt=`Bạn là gia sư tiếng Trung cho người Việt. User đang ở thành phố ${c.name} — chủ đề ${c.topic}.
+Tạo MỘT câu/cụm tiếng Trung ngắn (3-5 chữ Hán) về chủ đề này.
+RÀNG BUỘC TUYỆT ĐỐI: chỉ dùng các chữ Hán trong danh sách ĐÃ BIẾT, CỘNG đúng MỘT chữ Hán mới.
+ĐÃ BIẾT: ${knownArr.join('')}
+Trả về DUY NHẤT JSON (không giải thích, không markdown fence):
+{"hanzi":"...","pinyin":"...","vi":"...","newChar":"...","newPin":"...","newVi":"...","story":"1 câu cảm xúc gợi bối cảnh ${c.name}"}`;
+  const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':CFG.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:CFG.model||'claude-sonnet-4-20250514',max_tokens:400,messages:[{role:'user',content:prompt}]})});
+  const j=await r.json(); const text=j.content[0].text; const m=text.match(/\{[\s\S]*\}/);
+  if(!m) throw new Error('no JSON'); const data=JSON.parse(m[0]);
+  if(!DICT[data.newChar]) DICT[data.newChar]={pin:data.newPin,vi:data.newVi};
+  return data;
+}
+function genLocal(){
+  const newPool=["辣","茶","钱","吃","喝","中","国","出","入","小"].filter(c=>!S.known.has(c)&&DICT[c]);
+  const nc=newPool[0]||"辣";
+  let hanzi,vi;
+  if(S.known.has("我")&&S.known.has("爱")){hanzi="我爱"+nc; vi="Tôi thích "+DICT[nc].vi;}
+  else if(S.known.has("你")&&S.known.has("好")){hanzi="你好"+nc; vi="Chào "+DICT[nc].vi;}
+  else if(S.known.has("火")&&S.known.has("锅")){hanzi="火锅"+nc; vi="Lẩu "+DICT[nc].vi;}
+  else{ const base=["我","你"].find(c=>S.known.has(c))||"我"; hanzi=base+nc; vi="… "+DICT[nc].vi; }
+  return { hanzi, pinyin:[...hanzi].map(c=>DICT[c]?.pin||"").join(" "), vi,
+    newChar:nc, newPin:DICT[nc].pin, newVi:DICT[nc].vi, story:CITIES[S.city]?.story||"" };
+}
+
+/* ===== 8. SETTINGS ===== */
+function openSettings(){ $('cfgModel').value=CFG.model||''; $('cfgKey').value=CFG.key||''; $('settingsModal').classList.add('open'); }
+function closeSettings(){ $('settingsModal').classList.remove('open'); }
+function saveSettings(){
+  CFG.model=$('cfgModel').value.trim(); CFG.key=$('cfgKey').value.trim();
+  saveCfg(); closeSettings(); toast(CFG.key?'AI key trực tiếp đã bật':'Dùng server qwen / offline');
+}
+
+/* ===== MASCOT MÂY (inline SVG emoji-style, editorial) ===== */
+function MAY(variant){
+  // simple inline representation; designer asset có thể thay sau
+  const faces={default:'😊',wonder:'😮',sleep:'😴',point:'👉',walk:'🚶',lantern:'🏮'};
+  const f=faces[variant]||faces.default;
+  return `<span style="display:inline-block; position:relative">☁️<span style="position:absolute; left:50%; top:55%; transform:translate(-50%,-50%); font-size:.5em">${f}</span></span>`;
+}
+
+/* ===== 10. INIT ===== */
+(function applyHash(){
+  const h=location.hash.slice(1); if(!h)return;
+  const p=new URLSearchParams(h);
+  const c=p.get('c'); if(c&&CITIES[c])S.city=c;
+  const k=p.get('k'); if(k)k.split(',').forEach(ch=>ch&&S.known.add(ch));
+  const col=p.get('col'); if(col)col.split(',').forEach(ch=>ch&&S.collected.add(ch));
+  const cp=p.get('cp'); if(cp)cp.split(';').forEach(pair=>{const[ct,val]=pair.split(':'); if(ct&&val)S.cityProgress[ct]=parseInt(val);});
+  const d=p.get('d'); if(d!=null)S.decodeIdx=parseInt(d);
+  const sk=p.get('sk'); if(sk)S.streak=parseInt(sk);
+  const xp=p.get('xp'); if(xp)S.xp=parseInt(xp);
+  const s=p.get('s'); if(s)S.current=s;
+})();
+loadState();
+if('speechSynthesis'in window) speechSynthesis.getVoices();
+render();
+
+/* ===== POSTER backgrounds (CSS gradient stand-ins; designer thay ảnh thật sau) ===== */
+function POSTER(k){
+  const g={
+    chengdu:'linear-gradient(135deg,#4a1815,#8e2820 60%,#0D1726)',
+    shanghai:'linear-gradient(135deg,#0D1726,#1a3550 60%,#2a3a4a)',
+    beijing:'linear-gradient(135deg,#3a2e1f,#5a4630 60%,#0D1726)',
+    hangzhou:'linear-gradient(135deg,#1a3a3a,#2D7466 60%,#0D1726)',
+    xian:'linear-gradient(135deg,#5a3a1a,#8a5a2a 60%,#0D1726)',
+    guilin:'linear-gradient(135deg,#1f4438,#2D7466 60%,#0D1726)'
+  };
+  return g[k]||g.chengdu;
+}
+
+</script>
+</body>
+</html>

@@ -1,10 +1,12 @@
 import os
+import json
+import re
 from datetime import datetime
 from typing import Annotated
 
 from dotenv import load_dotenv
 from starlette.requests import Request
-from starlette.responses import HTMLResponse, PlainTextResponse
+from starlette.responses import HTMLResponse, PlainTextResponse, JSONResponse
 from langchain_openai import ChatOpenAI
 from langchain_core.tools import tool
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
@@ -38,6 +40,18 @@ llm = ChatOpenAI(
     base_url=LLM_BASE_URL,
     api_key=LLM_API_KEY,
     temperature=0.4,
+)
+
+# LLM riêng cho /lesson: qwen3 là reasoning model nên cần max_tokens cao để kịp
+# xuất JSON sau khi "suy nghĩ"; timeout ngắn + 0 retry để fail nhanh → client genLocal().
+llm_lesson = ChatOpenAI(
+    model=LLM_MODEL,
+    base_url=LLM_BASE_URL,
+    api_key=LLM_API_KEY,
+    temperature=0.5,
+    max_tokens=3000,
+    timeout=20,
+    max_retries=0,
 )
 
 # --- System Prompt ---
@@ -255,24 +269,87 @@ def health_check() -> PingStatus:
     return PingStatus.HEALTHY
 
 
-# --- Giao diện chat (phục vụ chat.html tại route gốc) ---
+# --- Giao diện ---
 _HERE = os.path.dirname(os.path.abspath(__file__))
+_ATLAS_HTML_PATH = os.path.join(_HERE, "ai-atlas.html")
 _CHAT_HTML_PATH = os.path.join(_HERE, "chat.html")
 
 
-async def serve_chat_ui(request: Request):
+def _serve_file(path: str, fallback: str):
     try:
-        with open(_CHAT_HTML_PATH, "r", encoding="utf-8") as f:
+        with open(path, "r", encoding="utf-8") as f:
             return HTMLResponse(f.read())
     except FileNotFoundError:
-        return PlainTextResponse(
-            "Thầy Trung agent đang chạy. Gọi POST /invocations để chat.",
-            status_code=200,
-        )
+        return PlainTextResponse(fallback, status_code=200)
 
 
-app.add_route("/", serve_chat_ui, methods=["GET"])
+async def serve_atlas_ui(request: Request):
+    # AI ATLAS là giao diện chính
+    return _serve_file(_ATLAS_HTML_PATH, "AI ATLAS đang chạy. POST /lesson để sinh bài học.")
+
+
+async def serve_chat_ui(request: Request):
+    # Thầy Trung chat vẫn giữ ở /chat
+    return _serve_file(_CHAT_HTML_PATH, "Thầy Trung chat. POST /invocations để chat.")
+
+
+# --- AI ATLAS: sinh câu i+1 qua qwen (có validator + fallback) ---
+async def lesson_endpoint(request: Request):
+    """
+    Input:  {"city": "CHENGDU", "topic": "Ẩm thực", "known": "我爱你火锅...", "story": "..."}
+    Output: {"status": "success", "data": {hanzi, pinyin, vi, newChar, newPin, newVi, story}}
+            hoặc {"status": "error", ...} để client tự fallback genLocal().
+    """
+    try:
+        payload = await request.json()
+    except Exception:
+        return JSONResponse({"status": "error", "msg": "invalid json"}, status_code=400)
+
+    city = payload.get("city", "")
+    topic = payload.get("topic", "")
+    known = payload.get("known", "")
+    story = payload.get("story", "")
+    known_set = set(known)
+
+    if not known:
+        return JSONResponse({"status": "error", "msg": "no known chars"}, status_code=400)
+
+    prompt = f"""Bạn là gia sư tiếng Trung cho người Việt. User đang ở thành phố {city} — chủ đề {topic}.
+Tạo MỘT câu/cụm tiếng Trung ngắn (3-5 chữ Hán) về chủ đề này.
+
+RÀNG BUỘC TUYỆT ĐỐI: chỉ dùng các chữ Hán trong danh sách ĐÃ BIẾT, CỘNG đúng MỘT chữ Hán mới.
+ĐÃ BIẾT: {known}
+
+Trả về DUY NHẤT JSON (không giải thích, không markdown fence):
+{{"hanzi":"...","pinyin":"...","vi":"...","newChar":"...","newPin":"...","newVi":"...","story":"1 câu cảm xúc gợi bối cảnh {city}"}}"""
+
+    try:
+        # ainvoke async (không block event loop) trên LLM cấu hình riêng cho lesson.
+        resp = await llm_lesson.ainvoke([HumanMessage(content=prompt)])
+        text = resp.content or ""
+        m = re.search(r"\{[\s\S]*\}", text)
+        if not m:
+            raise ValueError("no JSON in LLM output (reasoning model finished without content)")
+        data = json.loads(m.group(0))
+
+        # Validator: mọi chữ Hán ∈ known ∪ {newChar}
+        new_char = data.get("newChar", "")
+        hanzi = data.get("hanzi", "")
+        han_only = [ch for ch in hanzi if "一" <= ch <= "鿿"]
+        valid = all(ch in known_set or ch == new_char for ch in han_only)
+        if not valid or not new_char or not han_only:
+            raise ValueError("validator failed")
+
+        return JSONResponse({"status": "success", "data": data})
+    except Exception as e:
+        # client sẽ tự genLocal()
+        return JSONResponse({"status": "error", "msg": str(e)})
+
+
+app.add_route("/", serve_atlas_ui, methods=["GET"])
+app.add_route("/atlas", serve_atlas_ui, methods=["GET"])
 app.add_route("/chat", serve_chat_ui, methods=["GET"])
+app.add_route("/lesson", lesson_endpoint, methods=["POST"])
 
 
 if __name__ == "__main__":
