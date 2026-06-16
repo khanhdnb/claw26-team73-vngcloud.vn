@@ -272,6 +272,14 @@ function saveCfg(){ localStorage.setItem('aiatlas_cfg', JSON.stringify(CFG)); }
 let curTone=2, userContour=null, toneScore=null, toneSim=false, recording=false;
 let curSyl='ma';                 // âm tiết đang luyện (preset)
 let pinyinInitial=null;          // initial đang chọn ở bảng tra cứu (null = chưa chọn)
+let curDecodeQ=-1;               // câu giải mã đang hiển thị (RANDOM, không tuần tự)
+// chọn ngẫu nhiên 1 câu giải mã, tránh lặp lại câu vừa rồi
+function pickRandomDecode(){
+  const n=DECODE_QUESTIONS.length;
+  if(n<=1){ curDecodeQ=0; return; }
+  let i; do { i=Math.floor(Math.random()*n); } while(i===curDecodeQ);
+  curDecodeQ=i;
+}
 
 /* ===== utils ===== */
 const $=id=>document.getElementById(id);
@@ -305,7 +313,7 @@ function render(){
     case 'lesson': v.innerHTML=scrLessonShell(); maybeGenerate(); break;
     case 'tone': v.innerHTML=scrTone(); setTimeout(drawTone,30); break;
     case 'pinyin': v.innerHTML=scrPinyin(); break;
-    case 'decode': v.innerHTML=scrDecode(); break;
+    case 'decode': if(curDecodeQ<0) pickRandomDecode(); v.innerHTML=scrDecode(); break;
     case 'progress': v.innerHTML=scrProgress(); break;
   }
   // phone chrome
@@ -878,7 +886,8 @@ function drawTone(){
 
 /* ===== 09 DECODE ===== */
 function scrDecode(){
-  const q=DECODE_QUESTIONS[S.decodeIdx%DECODE_QUESTIONS.length];
+  if(curDecodeQ<0) pickRandomDecode();
+  const q=DECODE_QUESTIONS[curDecodeQ];
   const comps=(DICT[q.char]?.comp||[]).map(c=>`<div style="border:1px solid var(--gold); padding:8px 12px; text-align:center">
     <div class="han" style="color:var(--gold); font-size:22px">${c}</div><div style="font-size:9px; color:var(--stone)">${DICT[c]?.vi||''}</div></div>`).join('<span style="color:var(--gold); font-size:20px">+</span>');
   const opts=q.opts.map((o,i)=>`<div id="dopt${i}" onclick="answerDecode(${i})" style="background:var(--ivory); border:1px solid var(--line); padding:14px; margin-bottom:8px; cursor:pointer; display:flex; align-items:center; gap:12px">
@@ -902,13 +911,13 @@ function scrDecode(){
   </div>`;
 }
 function answerDecode(i){
-  const q=DECODE_QUESTIONS[S.decodeIdx%DECODE_QUESTIONS.length];
+  const q=DECODE_QUESTIONS[curDecodeQ];
   const el=$('dopt'+i);
   if(i===q.ans){ el.style.borderColor='var(--jade)'; el.style.background='rgba(45,116,102,.12)';
     S.known.add(q.char); S.xp+=20; toast(`+20 XP · Đọc được ${q.char}`); }
   else{ el.style.borderColor='var(--red)'; el.style.background='rgba(179,58,46,.1)';
     const ok=$('dopt'+q.ans); ok.style.borderColor='var(--jade)'; ok.style.background='rgba(45,116,102,.12)'; }
-  setTimeout(()=>{ S.decodeIdx++; render(); },1500);
+  setTimeout(()=>{ pickRandomDecode(); render(); },1500);  // câu kế tiếp RANDOM
 }
 
 /* ===== 10 PROGRESS ===== */
