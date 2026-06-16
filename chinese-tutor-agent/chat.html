@@ -62,6 +62,22 @@
   .msg .body ul, .msg .body ol { margin: 6px 0 6px 20px; }
   .msg .body hr { border: none; border-top: 1px solid #eee; margin: 10px 0; }
   .typing { font-style: italic; color: #888; }
+  /* Chữ Hán có thể click nghe phát âm */
+  .hanzi {
+    color: var(--red); font-weight: 600; cursor: pointer;
+    border-bottom: 1px dotted var(--red); padding: 0 1px;
+    transition: background .15s;
+  }
+  .hanzi:hover { background: #fbeae8; }
+  .hanzi.speaking { background: var(--gold); color: #fff; border-radius: 3px; }
+  .spk-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 18px; margin-left: 2px; vertical-align: middle;
+    border: none; background: transparent; cursor: pointer; opacity: .55;
+    font-size: 13px; line-height: 1;
+  }
+  .spk-btn:hover { opacity: 1; }
+  .audio-hint { font-size: 11px; color: #aaa; margin-left: 6px; }
   footer {
     padding: 14px 20px; background: #fff; border-top: 1px solid #e5e0d8;
   }
@@ -107,6 +123,43 @@ const send = document.getElementById("send");
 const statusEl = document.getElementById("status");
 let history = [];
 
+/* ===== PHÁT ÂM (Web Speech API — trình duyệt tự đọc giọng zh-CN) ===== */
+const speech = {
+  supported: "speechSynthesis" in window,
+  voice: null,
+  pickVoice() {
+    if (!this.supported) return;
+    const vs = window.speechSynthesis.getVoices();
+    // ưu tiên giọng tiếng Trung đại lục
+    this.voice = vs.find(v => /zh[-_]?CN/i.test(v.lang))
+      || vs.find(v => /^zh/i.test(v.lang))
+      || vs.find(v => /chinese|中文|普通话/i.test(v.name))
+      || null;
+  },
+  speak(text, el) {
+    if (!this.supported) { alert("Trình duyệt không hỗ trợ phát âm. Hãy dùng Chrome/Edge/Safari."); return; }
+    window.speechSynthesis.cancel();           // dừng câu đang đọc
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "zh-CN";
+    if (this.voice) u.voice = this.voice;
+    u.rate = 0.85;                              // chậm lại cho người học
+    if (el) {
+      el.classList.add("speaking");
+      u.onend = u.onerror = () => el.classList.remove("speaking");
+    }
+    window.speechSynthesis.speak(u);
+  }
+};
+if (speech.supported) {
+  speech.pickVoice();
+  window.speechSynthesis.onvoiceschanged = () => speech.pickVoice();
+}
+// click chữ Hán → đọc
+chat.addEventListener("click", e => {
+  const el = e.target.closest(".hanzi");
+  if (el) speech.speak(el.dataset.cn, el);
+});
+
 // Minimal markdown → HTML (tables, bold, headings, blockquote, lists, code, hr)
 function md(t) {
   t = t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
@@ -131,7 +184,20 @@ function md(t) {
   t = t.replace(/\n/g,"<br>");
   t = t.replace(/<br>(<(?:h2|h3|ul|table|blockquote|hr))/g,"$1");
   t = t.replace(/(<\/(?:h2|h3|ul|table|blockquote)>|<hr>)<br>/g,"$1");
+  t = wrapHanzi(t);
   return t;
+}
+
+// Bọc mỗi cụm chữ Hán liên tiếp thành <span class="hanzi"> để click nghe.
+// Bỏ qua text bên trong thẻ HTML (chỉ xử lý phần hiển thị).
+const HANZI_RE = /[一-鿿㐀-䶿]+/g;
+function wrapHanzi(html) {
+  // tách theo thẻ HTML, chỉ thay phần text giữa các thẻ
+  return html.replace(/(<[^>]+>)|([^<]+)/g, (m, tag, text) => {
+    if (tag) return tag;                       // giữ nguyên thẻ
+    return text.replace(HANZI_RE, h =>
+      `<span class="hanzi" data-cn="${h}" title="Nhấn để nghe">${h}</span>`);
+  });
 }
 
 function addMsg(role, text) {
@@ -191,7 +257,10 @@ send.onclick = sendMsg;
 input.addEventListener("keydown", e => { if (e.key==="Enter" && !busy) sendMsg(); });
 
 // greeting
-addMsg("bot", "Xin chào! 👋 Mình là **Thầy Trung** — gia sư tiếng Trung cho người Việt.\n\nMình dạy theo 4 phần: **Phiên âm (pinyin)** → **8 nét cơ bản** → **Bộ thủ** → **Học theo bài**.\n\nBạn gõ vài chữ để bắt đầu nhé, ví dụ: *\"Tôi muốn học tiếng Trung từ đầu\"*");
+const audioNote = speech.supported
+  ? "\n\n🔊 *Mẹo: bấm vào chữ Hán màu đỏ (như 你好) để nghe phát âm.*"
+  : "\n\n*(Trình duyệt này chưa hỗ trợ phát âm — dùng Chrome/Edge/Safari để nghe được.)*";
+addMsg("bot", "Xin chào! 👋 Mình là **Thầy Trung** — gia sư tiếng Trung cho người Việt.\n\nMình dạy theo 5 phần: **Phiên âm (pinyin)** → **8 nét cơ bản** → **Bộ thủ** → **Học theo bài** → **Thơ ca**.\n\nBạn gõ vài chữ để bắt đầu nhé, ví dụ: *\"Tôi muốn học tiếng Trung từ đầu\"*" + audioNote);
 ping();
 setInterval(ping, 10000);
 input.focus();
