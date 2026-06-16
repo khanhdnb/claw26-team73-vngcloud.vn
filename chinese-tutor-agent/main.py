@@ -25,6 +25,7 @@ import poetry
 import pinyin_data
 import vocab
 import grammar
+import radicals
 
 load_dotenv()
 
@@ -258,21 +259,20 @@ def search_poem(query: str) -> str:
 
 @tool
 def get_radical_info(radical: str) -> str:
-    """Tra thông tin về một bộ thủ (radical) trong tiếng Trung."""
-    radicals = {
-        "人": "Bộ 人 (rén) — người. Khi đứng bên trái viết là 亻. Ví dụ: 他(tā), 你(nǐ), 们(men)",
-        "口": "Bộ 口 (kǒu) — miệng. Ví dụ: 吃(chī-ăn), 喝(hē-uống), 叫(jiào-gọi)",
-        "水": "Bộ 水 (shuǐ) — nước. Khi bên trái viết là 氵. Ví dụ: 河(hé-sông), 海(hǎi-biển)",
-        "木": "Bộ 木 (mù) — gỗ. Ví dụ: 树(shù-cây), 桌(zhuō-bàn), 椅(yǐ-ghế)",
-        "火": "Bộ 火 (huǒ) — lửa. Khi dưới viết là 灬. Ví dụ: 热(rè-nóng), 烧(shāo-đốt)",
-        "心": "Bộ 心 (xīn) — tim. Khi bên trái viết là 忄. Ví dụ: 想(xiǎng-nghĩ), 忙(máng-bận)",
-        "手": "Bộ 手 (shǒu) — tay. Khi bên trái viết là 扌. Ví dụ: 打(dǎ-đánh), 拿(ná-cầm)",
-        "日": "Bộ 日 (rì) — mặt trời/ngày. Ví dụ: 明(míng-sáng), 早(zǎo-sáng sớm)",
-        "女": "Bộ 女 (nǚ) — phụ nữ. Ví dụ: 妈(mā-mẹ), 姐(jiě-chị), 好(hǎo-tốt)",
-        "言": "Bộ 言 (yán) — lời nói. Khi bên trái viết là 讠. Ví dụ: 说(shuō-nói), 请(qǐng-mời)",
-        "金": "Bộ 金 (jīn) — kim loại. Khi bên trái viết là 钅. Ví dụ: 钱(qián-tiền)",
-    }
-    return radicals.get(radical, f"Bộ thủ '{radical}': chưa có trong database. Hỏi về bộ thủ khác nhé!")
+    """Tra thông tin về bộ thủ (radical) tiếng Trung — 100 bộ thủ phổ biến nhất.
+
+    query có thể là: ký tự bộ thủ hoặc biến thể (亻/氵/扌...), pinyin (shou/shǒu),
+    hoặc nghĩa tiếng Việt (tay, nước, chim...). Trả về bộ thủ + pinyin + nghĩa + biến thể + chữ ví dụ.
+    """
+    # tra trực tiếp theo ký tự / biến thể
+    e = radicals.lookup(radical)
+    if e:
+        return radicals.format_entry(e)
+    # tìm theo pinyin / nghĩa
+    results = radicals.search(radical, limit=6)
+    if results:
+        return "\n".join(radicals.format_entry(r) for r in results)
+    return f"Bộ thủ '{radical}': không có trong bộ 100 bộ thủ phổ biến. Hỏi bộ khác nhé!"
 
 
 # --- LangGraph Agent ---
