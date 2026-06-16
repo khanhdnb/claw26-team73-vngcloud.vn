@@ -42,15 +42,18 @@ llm = ChatOpenAI(
     temperature=0.4,
 )
 
-# LLM riêng cho /lesson: qwen3 là reasoning model nên cần max_tokens cao để kịp
-# xuất JSON sau khi "suy nghĩ"; timeout ngắn + 0 retry để fail nhanh → client genLocal().
+# LLM cho /lesson — chỉ là BONUS: app chạy chính bằng genLocal() phía client (offline-first).
+# Gemma 4 31B-IT là instruction-tuned, lúc MAAS nhẹ tải sinh JSON ~1-3s; khi tải nặng có thể
+# chậm/timeout → fail nhanh (8s) để client genLocal() ngay. Override qua env LESSON_MODEL.
+# Đã test: qwen3-5-27b & minimax-m2.5 là reasoning model → thường noJSON/chậm hơn với prompt này.
+LESSON_MODEL = os.environ.get("LESSON_MODEL", "google/gemma-4-31b-it")
 llm_lesson = ChatOpenAI(
-    model=LLM_MODEL,
+    model=LESSON_MODEL,
     base_url=LLM_BASE_URL,
     api_key=LLM_API_KEY,
-    temperature=0.5,
-    max_tokens=3000,
-    timeout=20,
+    temperature=0.7,
+    max_tokens=500,
+    timeout=8,
     max_retries=0,
 )
 
@@ -314,35 +317,42 @@ async def lesson_endpoint(request: Request):
     if not known:
         return JSONResponse({"status": "error", "msg": "no known chars"}, status_code=400)
 
-    prompt = f"""Bạn là gia sư tiếng Trung cho người Việt. User đang ở thành phố {city} — chủ đề {topic}.
-Tạo MỘT câu/cụm tiếng Trung ngắn (3-5 chữ Hán) về chủ đề này.
+    prompt = f"""Bạn tạo câu luyện đọc tiếng Trung cho người Việt mới học. User đang ở thành phố {city} — chủ đề {topic}.
+DANH SÁCH CHỮ ĐÃ BIẾT (chỉ được dùng các chữ này): {known}
 
-RÀNG BUỘC TUYỆT ĐỐI: chỉ dùng các chữ Hán trong danh sách ĐÃ BIẾT, CỘNG đúng MỘT chữ Hán mới.
-ĐÃ BIẾT: {known}
+NHIỆM VỤ: tạo cụm 3-5 chữ Hán, trong đó:
+- Mọi chữ phải nằm trong DANH SÁCH ĐÃ BIẾT, CỘNG đúng 1 chữ Hán MỚI.
+- "newChar" PHẢI là ĐÚNG MỘT (1) ký tự Hán duy nhất — KHÔNG được là từ ghép 2 chữ.
+  Ví dụ SAI: newChar="工作" (2 chữ). Ví dụ ĐÚNG: newChar="作".
+- Nếu khái niệm cần 2 chữ (như 工作, 公司), hãy chọn chủ đề khác chỉ cần 1 chữ mới.
+- Mọi chữ trong "hanzi" ngoài chữ mới đều PHẢI có trong DANH SÁCH ĐÃ BIẾT.
 
 Trả về DUY NHẤT JSON (không giải thích, không markdown fence):
-{{"hanzi":"...","pinyin":"...","vi":"...","newChar":"...","newPin":"...","newVi":"...","story":"1 câu cảm xúc gợi bối cảnh {city}"}}"""
+{{"hanzi":"...","pinyin":"...","vi":"...","newChar":"<1 ký tự>","newPin":"...","newVi":"...","story":"1 câu cảm xúc gợi bối cảnh {city}"}}"""
 
+    # Gemma 4 31B-IT sinh JSON nhanh (~1-3s). Gọi 1 lần; fail thì client genLocal().
     try:
-        # ainvoke async (không block event loop) trên LLM cấu hình riêng cho lesson.
         resp = await llm_lesson.ainvoke([HumanMessage(content=prompt)])
         text = resp.content or ""
         m = re.search(r"\{[\s\S]*\}", text)
         if not m:
-            raise ValueError("no JSON in LLM output (reasoning model finished without content)")
+            raise ValueError("no JSON in LLM output")
         data = json.loads(m.group(0))
 
-        # Validator: mọi chữ Hán ∈ known ∪ {newChar}
+        # Validator: newChar đúng 1 ký tự MỚI + mọi chữ khác ∈ known
         new_char = data.get("newChar", "")
         hanzi = data.get("hanzi", "")
         han_only = [ch for ch in hanzi if "一" <= ch <= "鿿"]
-        valid = all(ch in known_set or ch == new_char for ch in han_only)
-        if not valid or not new_char or not han_only:
-            raise ValueError("validator failed")
+        if len(new_char) != 1:
+            raise ValueError(f"newChar không phải 1 ký tự: {new_char!r}")
+        if new_char in known_set:
+            raise ValueError("newChar đã có trong known (không phải chữ mới)")
+        if not han_only or not all(ch in known_set or ch == new_char for ch in han_only):
+            raise ValueError("validator failed (có chữ ngoài known)")
 
         return JSONResponse({"status": "success", "data": data})
     except Exception as e:
-        # client sẽ tự genLocal()
+        # client tự genLocal()
         return JSONResponse({"status": "error", "msg": str(e)})
 
 

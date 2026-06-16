@@ -727,8 +727,8 @@ async function genLesson(){
 async function genLLMServer(){
   const c=CITIES[S.city];
   const knownArr=[...S.known].filter(ch=>!DICT[ch]?.rad);
-  // timeout 7s — qwen reasoning có thể chậm; quá thì fallback genLocal ngay (UI không treo)
-  const ctrl=new AbortController(); const tid=setTimeout(()=>ctrl.abort(),7000);
+  // /lesson chỉ là bonus — server tự timeout 8s; client chờ tối đa 10s rồi fallback genLocal (UI không treo)
+  const ctrl=new AbortController(); const tid=setTimeout(()=>ctrl.abort(),10000);
   try{
     const r=await fetch('/lesson',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({city:c.name,topic:c.topic,known:knownArr.join(''),story:c.story}), signal:ctrl.signal});
