@@ -153,6 +153,12 @@ const DICT = {
   "林":{pin:"lín",vi:"rừng",comp:["木","木"],decode:true}, "明":{pin:"míng",vi:"sáng",comp:["日","月"],decode:true},
   "炎":{pin:"yán",vi:"nóng/viêm",comp:["火","火"],decode:true}, "休":{pin:"xiū",vi:"nghỉ ngơi",comp:["人","木"],decode:true},
   "品":{pin:"pǐn",vi:"phẩm/món",comp:["口","口","口"],decode:true},
+  // Chữ giải mã bổ sung — ghép từ bộ thủ tượng hình đã có trong DICT
+  "森":{pin:"sēn",vi:"rừng rậm",comp:["木","木","木"],decode:true},
+  "众":{pin:"zhòng",vi:"đám đông",comp:["人","人","人"],decode:true},
+  "晶":{pin:"jīng",vi:"lấp lánh",comp:["日","日","日"],decode:true},
+  "淼":{pin:"miǎo",vi:"mênh mông (nước)",comp:["水","水","水"],decode:true},
+  "焱":{pin:"yàn",vi:"lửa rực",comp:["火","火","火"],decode:true},
   // Mở rộng từ HSK1 (nguồn: complete-hsk-vocabulary) — chữ đơn phổ biến, nghĩa tiếng Việt
   "是":{pin:"shì",vi:"là"}, "不":{pin:"bù",vi:"không"}, "有":{pin:"yǒu",vi:"có"},
   "他":{pin:"tā",vi:"anh ấy"}, "她":{pin:"tā",vi:"cô ấy"}, "们":{pin:"men",vi:"(số nhiều)"},
@@ -176,7 +182,12 @@ const DECODE_QUESTIONS = [
   {char:"明",opts:["Tối","Sáng","Lạnh"],ans:1,hint:"Mặt trời 日 + mặt trăng 月 cùng chiếu → ?"},
   {char:"炎",opts:["Nóng","Mát","Ướt"],ans:0,hint:"Hai lửa 火 chồng lên nhau → ?"},
   {char:"休",opts:["Chạy","Nghỉ ngơi","Ăn"],ans:1,hint:"Người 人 tựa cây 木 → ?"},
-  {char:"品",opts:["Phẩm/món","Cây","Sông"],ans:0,hint:"Ba miệng 口 nếm món → ?"}
+  {char:"品",opts:["Phẩm/món","Cây","Sông"],ans:0,hint:"Ba miệng 口 nếm món → ?"},
+  {char:"森",opts:["Rừng rậm","Sa mạc","Biển"],ans:0,hint:"Ba cây 木 chồng lên nhau → ?"},
+  {char:"众",opts:["Một mình","Đám đông","Im lặng"],ans:1,hint:"Ba người 人 tụ lại → ?"},
+  {char:"晶",opts:["Tối tăm","Lấp lánh","Mưa"],ans:1,hint:"Ba mặt trời 日 cùng sáng → ?"},
+  {char:"淼",opts:["Khô cạn","Mênh mông nước","Lửa cháy"],ans:1,hint:"Ba dòng nước 水 trải rộng → ?"},
+  {char:"焱",opts:["Băng giá","Lửa rực","Gió"],ans:1,hint:"Ba ngọn lửa 火 bùng lên → ?"}
 ];
 const TONES = {
   1:{label:"mā",name:"Thanh 1 · ngang cao",c:[0.85,0.85,0.85,0.85,0.85]},
@@ -278,6 +289,7 @@ function speak(text){
 /* ===== 3. ROUTER ===== */
 const TABS=[
   {s:'atlas',ic:'🗺️',label:'Atlas'}, {s:'lesson',ic:'📖',label:'Học'},
+  {s:'decode',ic:'🧩',label:'Giải mã'},
   {s:'tone',ic:'🎵',label:'Phát âm'},
   {s:'progress',ic:'🧭',label:'Hành trình'}
 ];
@@ -873,9 +885,10 @@ function scrDecode(){
     <span style="width:24px; height:24px; border:1px solid var(--stone); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700">${'ABC'[i]}</span>
     <span style="font-size:14px">${o}</span></div>`).join('');
   return `<div class="scr pad" style="padding-top:44px; position:relative">
-    ${backBtn(false,'progress')}
+    ${backBtn(false,'atlas')}
     <div class="eyebrow eb-red">Giải mã · Decoding</div>
     <div class="h2" style="font-size:26px; margin-top:6px">Đoán nghĩa<br>từ bộ thủ</div>
+    <div style="font-size:12px; color:var(--stone); margin-top:6px">Chữ Hán = các bộ thủ ghép lại. Đoán nghĩa từ thành phần.</div>
     <div style="background:var(--navy); padding:24px; margin-top:20px; color:var(--ivory)">
       <div class="eyebrow eb-gold" style="text-align:center">Chữ mới</div>
       <div class="han" style="font-size:90px; text-align:center; color:var(--gold)" onclick="speak('${q.char}')">${q.char}</div>
@@ -923,7 +936,6 @@ function scrProgress(){
     <div class="eyebrow eb-muted" style="margin:20px 0 10px">Bộ sưu tập thành phố</div>
     <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:2px">${cityGrid}</div>
     <div style="background:var(--navy); display:grid; grid-template-columns:1fr 1fr 1fr; margin-top:18px">${stats}</div>
-    <button class="btn btn-ghost" style="color:var(--navy); margin-top:20px" onclick="go('decode')">🧩 Luyện giải mã</button>
   </div>`;
 }
 
