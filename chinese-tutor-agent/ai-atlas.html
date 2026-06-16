@@ -100,6 +100,12 @@ body{
 /* clickable hanzi (audio) */
 .hz{font-family:var(--font-han); cursor:pointer}
 .hz.known{color:var(--jade)} .hz.newc{color:var(--gold); border-bottom:2px dotted var(--gold)}
+
+/* lesson · mini-quiz feedback */
+.qz-opt{transition:background .15s, border-color .15s}
+.qz-opt:hover{background:rgba(247,242,234,.10)!important}
+.qz-opt.right{background:rgba(45,116,102,.30)!important; border-color:var(--jade)!important; color:#a8e6d4!important}
+.qz-opt.wrong{background:rgba(179,58,46,.20)!important; border-color:var(--red)!important; color:#f3b8b0!important}
 </style>
 </head>
 <body>
@@ -158,16 +164,12 @@ const DICT = {
   "一":{pin:"yī",vi:"một"}, "上":{pin:"shàng",vi:"trên/lên"}, "下":{pin:"xià",vi:"dưới/xuống"}
 };
 const CITIES = {
-  chengdu:{name:"CHENGDU",cn:"成都",topic:"Ẩm thực",seed:["火","锅","辣","茶","吃","喝","水","口"],story:"Hẻm Chengdu, hơi nồi lẩu bốc lên giữa lồng đèn đỏ."},
-  shanghai:{name:"SHANGHAI",cn:"上海",topic:"Công việc",seed:["我","你","好","人","大","中","国","心"],story:"Skyline Phố Đông sau cơn mưa, đèn neon mờ trong sương."},
-  beijing:{name:"BEIJING",cn:"北京",topic:"Giao tiếp",seed:["你","好","我","吃","喝","口","人","大"],story:"Hutong xám sớm mai, mùi bánh bao nóng từ tiệm vỉa hè."},
-  hangzhou:{name:"HANGZHOU",cn:"杭州",topic:"Lối sống",seed:["水","月","山","木","女","好","茶"],story:"Hồ Tây phủ sương, thuyền nan chậm trôi qua cầu đá."},
-  xian:{name:"XI'AN",cn:"西安",topic:"Lịch sử · HSK",seed:["日","月","大","人","口","木","火","中"],story:"Tường thành vàng nâu lúc hoàng hôn, ngựa đất nung im lìm."},
-  guilin:{name:"GUILIN",cn:"桂林",topic:"Thiên nhiên",seed:["山","水","木","日","月","火"],story:"Núi đá karst nổi trên sông Li, thuyền tre lướt giữa mây."}
-};
-const SIGNS = {
-  chengdu:["火锅店","辣火锅","好吃"], shanghai:["入口","出口","中国"], beijing:["你好","我爱中国"],
-  hangzhou:["大山茶","水月"], xian:["明月","日月"], guilin:["林山水","山林"]
+  chengdu:{name:"CHENGDU",nameVi:"Thành Đô",cn:"成都",topic:"Ẩm thực",seed:["火","锅","辣","茶","吃","喝","水","口"],story:"Hẻm Chengdu, hơi nồi lẩu bốc lên giữa lồng đèn đỏ."},
+  shanghai:{name:"SHANGHAI",nameVi:"Thượng Hải",cn:"上海",topic:"Công việc",seed:["我","你","好","人","大","中","国","心"],story:"Skyline Phố Đông sau cơn mưa, đèn neon mờ trong sương."},
+  beijing:{name:"BEIJING",nameVi:"Bắc Kinh",cn:"北京",topic:"Giao tiếp",seed:["你","好","我","吃","喝","口","人","大"],story:"Hutong xám sớm mai, mùi bánh bao nóng từ tiệm vỉa hè."},
+  hangzhou:{name:"HANGZHOU",nameVi:"Hàng Châu",cn:"杭州",topic:"Lối sống",seed:["水","月","山","木","女","好","茶"],story:"Hồ Tây phủ sương, thuyền nan chậm trôi qua cầu đá."},
+  xian:{name:"XI'AN",nameVi:"Tây An",cn:"西安",topic:"Lịch sử · HSK",seed:["日","月","大","人","口","木","火","中"],story:"Tường thành vàng nâu lúc hoàng hôn, ngựa đất nung im lìm."},
+  guilin:{name:"GUILIN",nameVi:"Quế Lâm",cn:"桂林",topic:"Thiên nhiên",seed:["山","水","木","日","月","火"],story:"Núi đá karst nổi trên sông Li, thuyền tre lướt giữa mây."}
 };
 const DECODE_QUESTIONS = [
   {char:"林",opts:["Rừng","Sông","Núi"],ans:0,hint:"Hai cây 木 đứng cạnh nhau → ?"},
@@ -235,7 +237,8 @@ const CITY_ORDER=["chengdu","shanghai","beijing","hangzhou","xian","guilin"];
 let S = {
   city:null, known:new Set(),
   cityProgress:{chengdu:0,shanghai:0,beijing:0,hangzhou:0,xian:0,guilin:0},
-  collected:new Set(), streak:7, xp:1240, decodeIdx:0, current:'onboard'
+  collected:new Set(), streak:7, xp:1240, decodeIdx:0, current:'onboard',
+  history:[]  /* nav stack — ephemeral, không persist */
 };
 function loadState(){
   try{ const r=JSON.parse(localStorage.getItem('aiatlas_state')); if(!r) return;
@@ -257,7 +260,6 @@ function saveCfg(){ localStorage.setItem('aiatlas_cfg', JSON.stringify(CFG)); }
 /* ===== tone local state ===== */
 let curTone=2, userContour=null, toneScore=null, toneSim=false, recording=false;
 let curSyl='ma';                 // âm tiết đang luyện (preset)
-let curSign=0;
 let pinyinInitial=null;          // initial đang chọn ở bảng tra cứu (null = chưa chọn)
 
 /* ===== utils ===== */
@@ -276,10 +278,10 @@ function speak(text){
 /* ===== 3. ROUTER ===== */
 const TABS=[
   {s:'atlas',ic:'🗺️',label:'Atlas'}, {s:'lesson',ic:'📖',label:'Học'},
-  {s:'tone',ic:'🎵',label:'Phát âm'}, {s:'camera',ic:'📷',label:'Thế giới'},
+  {s:'tone',ic:'🎵',label:'Phát âm'},
   {s:'progress',ic:'🧭',label:'Hành trình'}
 ];
-const DARK_SCREENS=new Set(['onboard','lesson','camera']);
+const DARK_SCREENS=new Set(['onboard','lesson']);
 function render(){
   const v=$('view');
   switch(S.current){
@@ -289,7 +291,6 @@ function render(){
     case 'atlas': v.innerHTML=scrAtlas(); break;
     case 'citydetail': v.innerHTML=scrCityDetail(); break;
     case 'lesson': v.innerHTML=scrLessonShell(); maybeGenerate(); break;
-    case 'camera': v.innerHTML=scrCamera(); setTimeout(scanSign,30); break;
     case 'tone': v.innerHTML=scrTone(); setTimeout(drawTone,30); break;
     case 'pinyin': v.innerHTML=scrPinyin(); break;
     case 'decode': v.innerHTML=scrDecode(); break;
@@ -316,7 +317,18 @@ function renderTabbar(){
        <span class="ic">${t.ic}</span>${t.label}</button>`;
   }).join('');
 }
-function go(s){ S.current=s; render(); }
+function go(s){
+  if(S.current && S.current!==s){
+    S.history.push(S.current);
+    if(S.history.length>30) S.history.shift();
+  }
+  S.current=s; render();
+}
+function goBack(fallback){
+  const prev=S.history.pop();
+  S.current=prev||fallback||'atlas';
+  render();
+}
 
 /* ===== screens injected below (part 2) ===== */
 </script>
@@ -333,6 +345,10 @@ function hanziSpan(ch, isKnown, isNew){
 function settingsGear(dark){
   const col = dark?'var(--gold)':'var(--stone)';
   return `<button onclick="openSettings()" style="position:absolute;top:8px;right:18px;background:none;border:none;color:${col};font-size:18px;cursor:pointer;z-index:10">⚙</button>`;
+}
+function backBtn(dark, fallback){
+  const col = dark?'var(--gold)':'var(--navy)';
+  return `<button onclick="goBack('${fallback||''}')" style="position:absolute;top:8px;left:14px;background:none;border:none;color:${col};font-size:13px;font-weight:600;cursor:pointer;z-index:10;font-family:var(--font-body);padding:6px 10px;letter-spacing:.5px">← Quay lại</button>`;
 }
 
 /* ===== 01 ONBOARD ===== */
@@ -369,15 +385,16 @@ function scrCityPick(){
         display:flex; align-items:flex-end">
       <div style="position:absolute; inset:0; background:linear-gradient(transparent 30%, rgba(13,23,38,.85))"></div>
       <div style="position:relative; display:flex; justify-content:space-between; align-items:flex-end; width:100%; padding:16px">
-        <div><div class="han" style="color:var(--gold); font-size:34px">${c.cn}</div>
-          <div class="h2" style="font-size:20px; color:var(--ivory)">${c.name}</div>
-          <div style="font-size:10px; color:rgba(247,242,234,.7); text-transform:uppercase; letter-spacing:1px">${c.topic}</div></div>
+        <div><div class="han" style="color:var(--gold); font-size:34px; line-height:1">${c.cn}</div>
+          <div class="h2" style="font-size:20px; color:var(--ivory); margin-top:4px; letter-spacing:1px">${c.name}</div>
+          <div style="font-size:13px; color:rgba(247,242,234,.8); margin-top:2px">${c.nameVi||c.name}</div></div>
         <div style="text-align:right"><div class="h2" style="color:var(--gold); font-size:22px">${p}%</div>
           <div style="font-size:8px; color:rgba(247,242,234,.6); text-transform:uppercase">${status}</div></div>
       </div></div>`;
   }).join('');
-  return `<div class="scr">
-    <div class="pad" style="padding-top:24px; padding-bottom:18px">
+  return `<div class="scr" style="position:relative">
+    ${backBtn(false,'onboard')}
+    <div class="pad" style="padding-top:44px; padding-bottom:18px">
       <div class="eyebrow eb-red">Chương 01 · Chọn điểm đến</div>
       <div class="h2" style="font-size:28px; margin-top:6px">Bạn muốn<br>du hành đâu trước?</div>
       <div style="font-size:12px; color:var(--stone); margin-top:6px">6 thành phố · 6 bộ chữ Hán · 1 hành trình</div>
@@ -392,37 +409,49 @@ function pickCity(k){
   document.querySelectorAll('#view [onclick^="pickCity"]').forEach(el=>el.style.outline='');
   event.currentTarget.style.outline='2px solid var(--red)';
   const cta=$('cityCta'); cta.disabled=false; cta.style.opacity='1';
-  toast(`Đã chọn ${CITIES[k].name}`);
+  toast(`Đã chọn ${CITIES[k].nameVi||CITIES[k].name}`);
 }
 function afterPick(){ if(!S.city)return; go('seed'); }
 
 /* ===== 03 SEED ===== */
 function scrSeed(){
   const c=CITIES[S.city];
-  ['山','口','人'].forEach(x=>S.known.add(x));
-  const seeds=['山','口','人'].map(ch=>{const d=DICT[ch];
-    return `<div style="background:var(--ivory); border:1px solid var(--line); padding:14px; text-align:center; flex:1">
-      <div class="han" style="font-size:26px; color:var(--navy)">${hanziSpan(ch,true,false)}</div>
-      <div style="font-size:9px; color:var(--stone)">${d.pin} · ${d.vi}</div></div>`}).join('');
-  return `<div class="scr pad" style="padding-top:24px">
-    <div class="eyebrow eb-jade">Ngày 01 · Gieo hạt</div>
-    <div class="h2" style="font-size:26px; margin-top:6px">Chưa biết gì?<br>Bắt đầu từ hình.</div>
-    <div style="background:var(--navy); padding:24px; margin-top:20px; color:var(--ivory)">
-      <div class="eyebrow eb-gold">Cái này trông giống gì?</div>
-      <div style="display:flex; align-items:center; justify-content:center; gap:16px; margin:20px 0">
-        <span style="font-size:56px">⛰️</span><span style="color:var(--stone)">→</span>
-        <span class="han" style="font-size:72px; color:var(--gold)" onclick="speak('山')">山</span></div>
-      <div style="text-align:center; font-size:13px"><span class="han">山</span> = núi · <span class="pin" style="color:var(--gold)">shān</span></div>
-      <div style="border-top:1px solid var(--jade); margin-top:18px; padding-top:12px; text-align:center;
-        font-size:12px; color:var(--jade)">✓ Bạn vừa đọc được chữ Hán đầu tiên</div>
+  /* lấy 3 chữ pictograph thật từ seed của city (chữ có cả rad + pic) */
+  const picSeeds=c.seed.filter(ch=>DICT[ch]&&DICT[ch].rad&&DICT[ch].pic).slice(0,3);
+  while(picSeeds.length<3){ for(const fb of ['山','口','人']) if(!picSeeds.includes(fb)) picSeeds.push(fb); }
+  picSeeds.forEach(x=>S.known.add(x));
+  const featured=picSeeds[0], fd=DICT[featured];
+  const seeds=picSeeds.map(ch=>{const d=DICT[ch];
+    return `<div onclick="speak('${ch}')" style="background:var(--ivory); border:1px solid var(--line); padding:12px 6px; text-align:center; flex:1; cursor:pointer">
+      <div style="font-size:24px; line-height:1">${d.pic}</div>
+      <div class="han" style="font-size:26px; color:var(--navy); margin-top:4px">${ch}</div>
+      <div style="font-size:10px; color:var(--stone); margin-top:3px">${d.pin}</div>
+      <div style="font-size:10px; color:var(--navy); margin-top:1px">${d.vi}</div></div>`}).join('');
+  return `<div class="scr pad" style="padding-top:44px; padding-bottom:24px; position:relative">
+    ${backBtn(false,'citypick')}
+    <div class="eyebrow eb-jade">Ngày 01 · Gieo hạt · ${c.nameVi||c.name}</div>
+    <div class="h2" style="font-size:24px; margin-top:6px; line-height:1.15">Đến ${c.nameVi||c.name}.<br>Đọc chữ đầu tiên<br>từ hình ảnh.</div>
+    <div style="font-size:12px; color:var(--stone); margin-top:10px; line-height:1.5">Chữ Hán cổ vốn là tranh vẽ. Nhìn hình → nhớ chữ — không học vẹt, không học thuộc.</div>
+
+    <div style="background:var(--navy); padding:24px; margin-top:18px; color:var(--ivory)">
+      <div class="eyebrow eb-gold">Ví dụ · pictograph</div>
+      <div style="display:flex; align-items:center; justify-content:center; gap:16px; margin:18px 0">
+        <span style="font-size:56px">${fd.pic}</span><span style="color:var(--stone)">→</span>
+        <span class="han" style="font-size:72px; color:var(--gold); cursor:pointer" onclick="speak('${featured}')">${featured}</span></div>
+      <div style="text-align:center; font-size:13px"><span class="han">${featured}</span> = ${fd.vi} · <span class="pin" style="color:var(--gold)">${fd.pin}</span></div>
+      <div style="text-align:center; font-size:9px; color:rgba(247,242,234,.5); margin-top:6px; letter-spacing:1.5px; text-transform:uppercase">↑ Chạm chữ để nghe</div>
+      <div style="border-top:1px solid var(--jade); margin-top:14px; padding-top:12px; text-align:center; font-size:12px; color:var(--jade)">✓ Bạn vừa đọc được chữ Hán đầu tiên</div>
     </div>
-    <div class="eyebrow eb-muted" style="margin-top:22px">Hạt giống đã trồng</div>
+
+    <div class="eyebrow eb-muted" style="margin-top:22px">3 hạt giống của ${c.nameVi||c.name}</div>
+    <div style="font-size:11px; color:var(--stone); margin-top:4px; line-height:1.4">Mỗi chữ là <b>bộ thủ</b> — viên gạch xây nên hàng trăm chữ phức tạp hơn. Chạm để nghe.</div>
     <div style="display:flex; gap:8px; margin-top:10px">${seeds}</div>
-    <div style="background:var(--red); padding:18px; margin-top:22px; color:var(--ivory); text-align:center">
-      <div style="font-size:11px; opacity:.85">Cuối hôm nay bạn đọc được</div>
-      <div class="han" style="font-size:28px; letter-spacing:4px; margin:6px 0">入口</div>
-      <div style="font-size:11px; opacity:.85">rù kǒu · biển ở sân bay Phố Đông</div></div>
-    <button class="btn btn-ghost" style="margin-top:22px; color:var(--navy)" onclick="finishSeed()">Vào Atlas →</button>
+
+    <div style="background:rgba(45,116,102,.12); border-left:3px solid var(--jade); padding:12px 14px; margin-top:18px; font-size:12px; color:var(--navy); line-height:1.5">
+      <b>Tiếp theo trong Atlas:</b> AI sinh câu thật từ các chữ này + đúng <b>1 chữ mới</b> mỗi lần — bạn học bằng <i>hiểu bối cảnh</i>, không học thuộc.
+    </div>
+
+    <button class="btn btn-red" style="margin-top:18px" onclick="finishSeed()">Khởi hành đến Atlas →</button>
   </div>`;
 }
 function finishSeed(){
@@ -448,18 +477,22 @@ function scrAtlas(){
   let lines='';
   S.collected.forEach(k=>{ if(k!==S.city){const a=CITY_COORDS[S.city],b=CITY_COORDS[k];
     lines+=`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="var(--gold)" stroke-width="1" stroke-dasharray="3 3" opacity=".5"/>`}});
-  const mini = CITY_ORDER.filter(k=>k!==S.city).map(k=>{const cc=CITIES[k];const p=S.cityProgress[k]||0;
-    return `<div onclick="visitCity('${k}')" style="position:relative; height:110px; cursor:pointer; background:${POSTER(k)}; background-size:cover; background-position:center; display:flex; align-items:flex-end">
-      <div style="position:absolute; inset:0; background:linear-gradient(transparent 40%, rgba(13,23,38,.82))"></div>
-      <div style="position:relative; padding:10px"><div class="han" style="color:var(--gold); font-size:18px">${cc.cn}</div>
-        <div style="font-size:9px; color:var(--ivory); font-weight:700">${cc.name} · ${p}%</div></div></div>`}).join('');
-  return `<div class="scr">
-    <div class="pad" style="padding-top:22px; display:flex; justify-content:space-between; align-items:flex-start">
+  const curProg=S.cityProgress[S.city]||0;
+  const otherCities = CITY_ORDER.filter(k=>k!==S.city);
+  const mini = otherCities.map(k=>{const cc=CITIES[k];const p=S.cityProgress[k]||0;const visited=S.collected.has(k);
+    return `<div onclick="visitCity('${k}')" style="cursor:pointer; background:var(--ivory); border:1px solid var(--line); padding:10px 8px; text-align:center; opacity:${visited?1:.85}; transition:opacity .15s">
+      <div class="han" style="font-size:20px; color:${visited?'var(--gold)':'var(--navy)'}; line-height:1">${cc.cn}</div>
+      <div style="font-size:9px; color:var(--navy); font-weight:600; margin-top:3px; letter-spacing:.5px">${cc.name}</div>
+      <div style="font-size:9px; color:var(--stone); margin-top:2px">${cc.nameVi||cc.name}</div>
+      <div style="font-size:8px; color:${p>0?'var(--jade)':'var(--stone)'}; margin-top:3px; font-weight:700; letter-spacing:.5px">${p>0?p+'%':'CHƯA GHÉ'}</div></div>`}).join('');
+  return `<div class="scr" style="position:relative">
+    ${backBtn(false,'citypick')}
+    <div class="pad" style="padding-top:44px; display:flex; justify-content:space-between; align-items:flex-start">
       <div><div class="eyebrow eb-red">Chương · Atlas</div>
         <div class="h2" style="font-size:26px; margin-top:4px">Khám phá<br>Trung Quốc cùng AI</div></div>
       <div style="background:var(--navy); color:var(--gold); font-size:12px; font-weight:700; padding:6px 12px">🔥 ${S.streak} ngày</div>
     </div>
-    <div style="background:var(--navy); margin-top:18px; padding:10px">
+    <div style="background:var(--navy); margin-top:14px; padding:10px">
       <svg viewBox="0 0 320 280" style="width:100%; height:auto">
         <path d="M90,60 Q200,40 270,90 Q300,160 250,230 Q160,270 90,230 Q50,150 90,60 Z" fill="none" stroke="var(--gold)" stroke-width="1" stroke-dasharray="4 4" opacity=".4"/>
         ${lines}${nodes}
@@ -469,15 +502,37 @@ function scrAtlas(){
         <span><span style="color:var(--gold)">●</span> Đã ghé</span>
         <span><span style="color:rgba(212,178,122,.4)">●</span> Chưa khám phá</span></div>
     </div>
-    <div class="pad"><div onclick="go('citydetail')" style="background:var(--ivory); border:1px solid var(--line); margin-top:18px; padding:18px; display:flex; align-items:center; justify-content:space-between; cursor:pointer">
-      <div style="display:flex; align-items:center; gap:14px">
-        <div class="han" style="color:var(--red); font-size:38px">${c.cn}</div>
-        <div><div class="eyebrow eb-muted">Thành phố hiện tại</div>
-          <div class="h2" style="font-size:18px">${c.name}</div>
-          <div style="font-size:11px; color:var(--stone)">${c.topic} · ${S.cityProgress[S.city]||0}% hành trình</div></div></div>
-      <div style="color:var(--red); font-size:22px">›</div></div></div>
-    <div class="pad"><div class="eyebrow eb-muted" style="margin:20px 0 10px">Các thành phố khác</div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:2px">${mini}</div></div>
+
+    <!-- HERO · current city (main focus) -->
+    <div class="pad" style="margin-top:18px">
+      <div class="eyebrow eb-red">★ Thành phố hiện tại</div>
+      <div onclick="go('citydetail')" style="position:relative; height:200px; cursor:pointer; background:${POSTER(S.city)}; background-size:cover; background-position:center; margin-top:8px; display:flex; align-items:flex-end; overflow:hidden">
+        <div style="position:absolute; inset:0; background:linear-gradient(transparent 30%, rgba(13,23,38,.92))"></div>
+        <div style="position:absolute; top:14px; right:14px; background:var(--red); color:var(--ivory); font-size:10px; font-weight:700; padding:4px 10px; letter-spacing:1.5px">${curProg}%</div>
+        <div style="position:relative; padding:18px; width:100%">
+          <div class="han" style="color:var(--gold); font-size:34px; line-height:1">${c.cn}</div>
+          <div class="h2" style="font-size:24px; color:var(--ivory); margin-top:4px; letter-spacing:.5px">${c.name}</div>
+          <div style="font-size:13px; color:rgba(247,242,234,.85); margin-top:2px">${c.nameVi||c.name}</div>
+          <div style="height:3px; background:rgba(247,242,234,.18); margin-top:10px; position:relative">
+            <div style="position:absolute; left:0; top:0; bottom:0; width:${curProg}%; background:var(--gold)"></div>
+          </div>
+          <div style="display:flex; justify-content:flex-end; align-items:center; margin-top:10px">
+            <div style="color:var(--gold); font-size:11px; font-weight:700; letter-spacing:1px">XEM CHI TIẾT ›</div>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-red" style="margin-top:10px" onclick="go('lesson')">📖 Tiếp tục bài học →</button>
+    </div>
+
+    <!-- Sub · other cities (de-emphasized) -->
+    <div class="pad" style="margin-top:24px">
+      <div style="display:flex; justify-content:space-between; align-items:baseline">
+        <div class="eyebrow eb-muted">Điểm đến tương lai</div>
+        <div style="font-size:9px; color:var(--stone); letter-spacing:1px">${otherCities.length} THÀNH PHỐ</div>
+      </div>
+      <div style="font-size:11px; color:var(--stone); margin-top:4px; line-height:1.4">Tập trung hoàn thành <b style="color:var(--navy)">${c.nameVi||c.name}</b> trước. Khi sẵn sàng, ghé thành phố khác để tiếp tục hành trình.</div>
+      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:10px">${mini}</div>
+    </div>
   </div>`;
 }
 function visitCity(k){ S.city=k; if(!S.collected.has(k)){S.collected.add(k); CITIES[k].seed.forEach(c=>S.known.add(c)); S.cityProgress[k]=Math.max(S.cityProgress[k]||0, pct(S.known.size,12));} go('citydetail'); }
@@ -488,7 +543,8 @@ function scrCityDetail(){
   const rads=[...S.known].filter(x=>DICT[x]?.rad);
   const chars=[...S.known].filter(x=>DICT[x]&&!DICT[x].rad);
   const strokes=8;
-  return `<div class="scr">
+  return `<div class="scr" style="position:relative">
+    ${backBtn(true,'atlas')}
     <div style="position:relative; height:320px; background:${POSTER(S.city)}; background-size:cover; background-position:center; display:flex; align-items:flex-end">
       <div style="position:absolute; inset:0; background:linear-gradient(transparent 20%, rgba(13,23,38,.92))"></div>
       <div style="position:relative; padding:24px">
@@ -526,78 +582,117 @@ function scrLessonShell(){
   return `<div class="scr" style="background:${POSTER(S.city)}; background-size:cover; background-position:center; min-height:100%; position:relative; color:var(--ivory)">
     <div style="position:absolute; inset:0; background:linear-gradient(rgba(13,23,38,.55), rgba(13,23,38,.95))"></div>
     <div style="position:relative; padding:24px; min-height:100%; display:flex; flex-direction:column">
+      ${backBtn(true,'atlas')}
       ${settingsGear(true)}
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px">
-        <span class="eyebrow eb-gold">${c.name} · ${c.topic.toUpperCase()}</span>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:32px">
+        <span class="eyebrow eb-gold">${c.name} · ${c.nameVi||c.name}</span>
         <span style="background:var(--navy); color:var(--gold); font-size:10px; font-weight:700; padding:4px 10px">✦ AI i+1</span></div>
-      <div id="lessonBody" style="flex:1; display:flex; flex-direction:column; justify-content:center; padding:30px 0">
-        <div style="text-align:center; color:rgba(247,242,234,.7)">
+      <div id="lessonBody" style="flex:1; display:flex; flex-direction:column; justify-content:flex-start; padding:20px 0">
+        <div style="text-align:center; color:rgba(247,242,234,.7); padding:40px 0">
           <div style="font-size:40px; margin-bottom:10px">${MAY('sleep')}</div>
           <div style="font-size:13px">MÂY đang soạn câu cho bạn…</div></div></div>
       <div class="btn-row">
-        <button class="btn btn-ghost" style="color:var(--ivory)" onclick="go('lesson')">↻ Câu khác</button>
-        <button class="btn btn-gold" onclick="go('camera')">Đọc ngoài đời →</button></div>
+        <button class="btn btn-gold" style="flex:1" onclick="markLearned()">✓ Thuộc rồi → Câu tiếp theo</button></div>
     </div></div>`;
 }
+/* tone number từ pinyin có dấu */
+function toneOf(pin){
+  if(!pin) return 5;
+  const T={1:"āēīōūǖĀĒĪŌŪǕ",2:"áéíóúǘÁÉÍÓÚǗ",3:"ǎěǐǒǔǚǍĚǏǑǓǙ",4:"àèìòùǜÀÈÌÒÙǛ"};
+  for(const [k,chars] of Object.entries(T)) for(const c of chars) if(pin.includes(c)) return +k;
+  return 5;
+}
+/* sinh 3 đáp án quiz */
+function makeQuizOptions(rightVi, newChar){
+  const pool=Object.entries(DICT||{}).filter(([ch,e])=>ch!==newChar && e.vi && e.vi!==rightVi).map(([,e])=>e.vi);
+  const distractors=[];
+  let seed=newChar.charCodeAt(0);
+  while(distractors.length<2 && pool.length){
+    const i=(seed*(distractors.length+7))%pool.length;
+    const pick=pool.splice(i,1)[0];
+    if(!distractors.includes(pick)) distractors.push(pick);
+  }
+  while(distractors.length<2) distractors.push("(khác)");
+  const opts=[rightVi,...distractors];
+  for(let i=opts.length-1;i>0;i--){ const j=(seed*(i+1))%(i+1); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+  return {opts, rightIdx:opts.indexOf(rightVi)};
+}
+function quizAnswer(idx, rightIdx){
+  const opts=document.querySelectorAll('.qz-opt');
+  if(!opts.length || opts[0].dataset.done) return;
+  opts.forEach(o=>o.dataset.done='1');
+  opts[idx].classList.add(idx===rightIdx?'right':'wrong');
+  if(idx!==rightIdx) opts[rightIdx].classList.add('right');
+  const fb=$('quizFb');
+  if(fb){
+    if(idx===rightIdx){ S.xp=(S.xp||0)+5; fb.textContent='✓ Chính xác · +5 XP'; fb.style.color='var(--jade)'; }
+    else { fb.textContent='✗ Chưa đúng — đáp án đã sáng.'; fb.style.color='#f3b8b0'; }
+    saveState&&saveState();
+  }
+}
+function markLearned(){ S.xp=(S.xp||0)+10; saveState&&saveState(); go('lesson'); }
+
 function renderLesson(d){
   const body=$('lessonBody'); if(!body)return;
   const c=CITIES[S.city]||CITIES.chengdu;
-  const hz=[...d.hanzi].map(ch=>{ const isNew=ch===d.newChar; const known=S.known.has(ch)&&!isNew;
+  const hz=[...d.hanzi].map(ch=>{ const isNew=ch===d.newChar;
     return `<span class="hz ${isNew?'newc':'known'}" onclick="speak('${ch}')" style="color:${isNew?'var(--gold)':'var(--ivory)'}">${ch}</span>`}).join(' ');
   const total=[...d.hanzi].length, known=total-1;
+  const tone=toneOf(d.newPin);
+  const ncEntry=(typeof DICT!=='undefined'&&DICT[d.newChar])||{};
+  const radList=ncEntry.comp||[];
+  const radHtml=radList.length
+    ? `<div style="margin-top:12px; padding-top:10px; border-top:1px dashed rgba(212,178,122,.3)">
+        <div class="eyebrow eb-gold" style="font-size:9px">Cấu thành</div>
+        <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px">
+          ${radList.map(r=>{ const e=(typeof DICT!=='undefined'&&DICT[r])||{}; return `<span class="hz" onclick="speak('${r}')" style="font-family:var(--font-han); font-size:18px; color:var(--ivory); background:rgba(247,242,234,.08); border:1px solid rgba(247,242,234,.2); padding:4px 10px; letter-spacing:2px">${r}<span style="font-family:var(--font-body); font-size:10px; font-style:italic; opacity:.6; margin-left:4px; letter-spacing:0">${e.pin||''}${e.vi?' · '+e.vi:''}</span></span>`}).join('')}
+        </div></div>`
+    : '';
+
+  const qz=makeQuizOptions(d.newVi, d.newChar);
+  const quizHtml=`<div style="background:rgba(247,242,234,.06); border-left:3px solid var(--jade); padding:14px; margin-top:12px">
+      <div class="eyebrow" style="color:var(--jade); font-size:9px">✓ Hiểu chưa?</div>
+      <div style="font-size:13px; color:var(--ivory); margin-top:6px; line-height:1.5"><span class="han" style="color:var(--gold); font-size:20px">${d.newChar}</span> (${esc(d.newPin)}) — nghĩa là gì?</div>
+      <div style="display:flex; flex-direction:column; gap:6px; margin-top:10px">
+        ${qz.opts.map((o,i)=>`<button class="qz-opt" onclick="quizAnswer(${i},${qz.rightIdx})" style="background:rgba(247,242,234,.04); border:1px solid rgba(247,242,234,.18); color:var(--ivory); padding:9px 12px; font-size:13px; font-family:var(--font-body); text-align:left; cursor:pointer">${esc(o)}</button>`).join('')}
+      </div>
+      <div id="quizFb" style="margin-top:10px; font-size:11px; color:var(--jade); font-weight:600">Chạm để chọn — đúng được +5 XP.</div>
+    </div>`;
+
   body.innerHTML=`
     <div class="eyebrow eb-gold">Bài học sinh tại chỗ</div>
-    <div class="h2" style="font-size:44px; color:var(--ivory); letter-spacing:-2px; line-height:.95; margin:6px 0">LOST IN<br>${c.name}</div>
-    <div class="divider" style="background:rgba(247,242,234,.25); margin:18px 0"></div>
-    <div class="han" style="font-size:38px; letter-spacing:4px; text-align:center">${hz}</div>
-    <div class="pin" style="color:var(--gold); font-size:15px; text-align:center; margin-top:10px">${esc(d.pinyin)}</div>
+    <div class="h2" style="font-size:38px; color:var(--ivory); letter-spacing:-2px; line-height:.95; margin:6px 0">LOST IN<br>${c.name}</div>
+    <div class="divider" style="background:rgba(247,242,234,.25); margin:14px 0"></div>
+    <div class="han" style="font-size:34px; letter-spacing:4px; text-align:center">${hz}</div>
+    <div class="pin" style="color:var(--gold); font-size:15px; text-align:center; margin-top:8px">${esc(d.pinyin)}</div>
     <div style="font-size:13px; color:var(--ivory); text-align:center; margin-top:6px">${esc(d.vi)}</div>
-    <div style="background:rgba(247,242,234,.08); border:1px solid var(--gold); padding:12px 14px; margin-top:22px; display:flex; gap:12px; align-items:flex-start">
-      <div style="font-size:40px; line-height:1">${MAY('point')}</div>
+
+    <div style="background:rgba(212,178,122,.1); border:1px solid rgba(212,178,122,.4); padding:14px; margin-top:18px">
+      <div class="eyebrow eb-gold" style="font-size:9px">✦ Chữ mới hôm nay</div>
+      <div style="display:flex; gap:14px; align-items:center; margin-top:10px">
+        <div class="han" onclick="speak('${d.newChar}')" style="font-size:64px; line-height:1; color:var(--gold); cursor:pointer; flex:none; width:92px; text-align:center; border:1px dashed rgba(212,178,122,.4); padding:8px 0; text-shadow:0 0 18px rgba(212,178,122,.4); user-select:none">${d.newChar}</div>
+        <div style="flex:1; min-width:0">
+          <div style="font-family:var(--font-body); font-style:italic; font-size:18px; color:var(--gold); letter-spacing:1px">${esc(d.newPin)}<span style="display:inline-block; font-size:9px; font-style:normal; font-weight:700; letter-spacing:1.5px; background:var(--red); color:var(--ivory); padding:2px 6px; margin-left:6px; vertical-align:middle">Thanh ${tone}</span></div>
+          <div style="font-size:14px; color:var(--ivory); margin-top:4px; font-weight:600">"${esc(d.newVi)}"</div>
+          ${ncEntry.rad?'<div style="font-size:11px; color:rgba(247,242,234,.7); margin-top:6px">Chữ này là <b style="color:var(--gold)">bộ thủ</b> — viên gạch xây nên chữ khác.</div>':''}
+        </div>
+      </div>
+      ${radHtml}
+      <div style="font-size:9px; letter-spacing:1.5px; color:rgba(247,242,234,.5); text-align:center; margin-top:10px; text-transform:uppercase">↑ Chạm chữ để nghe phát âm</div>
+    </div>
+
+    <div style="background:rgba(247,242,234,.08); border:1px solid var(--gold); padding:12px 14px; margin-top:12px; display:flex; gap:12px; align-items:flex-start">
+      <div style="font-size:36px; line-height:1">${MAY('point')}</div>
       <div><div class="eyebrow eb-gold">MÂY · HƯỚNG DẪN</div>
         <div style="font-size:12px; color:rgba(247,242,234,.9); margin-top:4px">${esc(d.story)} Đừng học thuộc <span class="han" style="color:var(--gold)">${d.newChar}</span> — hãy cảm bối cảnh.</div></div></div>
+
     <div style="background:rgba(45,116,102,.25); border-left:3px solid var(--jade); padding:12px 14px; margin-top:12px; font-size:13px">
-      ✓ Bạn đọc được <b>${known}/${total} chữ</b> — chỉ <span class="han" style="color:var(--gold)">${d.newChar}</span> (${esc(d.newPin)} · ${esc(d.newVi)}) là mới.</div>`;
+      ✓ Bạn đọc được <b>${known}/${total} chữ</b> — chỉ <span class="han" style="color:var(--gold)">${d.newChar}</span> (${esc(d.newPin)} · ${esc(d.newVi)}) là mới.</div>
+
+    ${quizHtml}`;
 }
 
-/* ===== 07 CAMERA ===== */
-function scrCamera(){
-  const signs=SIGNS[S.city]||SIGNS.chengdu;
-  const tags=signs.map((s,i)=>`<span onclick="pickSign(${i})" style="cursor:pointer; padding:8px 12px; font-size:13px; font-family:var(--font-han);
-    ${i===curSign?'background:var(--gold); color:var(--navy)':'border:1px solid var(--gold); color:var(--gold)'}">${s}</span>`).join('');
-  return `<div class="scr" style="background:#0a0a0a; min-height:100%; color:var(--ivory); position:relative; padding:50px 24px 24px">
-    ${settingsGear(true)}
-    <div style="text-align:center; margin-bottom:16px">
-      <span style="color:var(--red); font-size:11px; font-weight:700">● LIVE</span>
-      <span class="eyebrow eb-gold" style="margin-left:8px">Đọc thế giới · ${(CITIES[S.city]||CITIES.chengdu).name}</span></div>
-    <input id="signInput" value="${signs[curSign]||''}" oninput="scanSign()"
-      style="width:100%; background:rgba(247,242,234,.08); border:1px solid var(--gold); color:var(--ivory);
-      font-family:var(--font-han); font-size:22px; text-align:center; letter-spacing:4px; padding:14px">
-    <div style="display:flex; gap:8px; justify-content:center; margin-top:14px">${tags}</div>
-    <div style="border:2px solid var(--gold); padding:32px 16px; margin-top:22px; text-align:center">
-      <div id="signRow" class="han" style="font-size:48px; letter-spacing:8px"></div></div>
-    <div id="scanResult" style="background:rgba(247,242,234,.06); border-left:3px solid var(--gold); padding:14px; margin-top:18px; font-size:13px; min-height:20px"></div>
-    <div style="display:flex; justify-content:center; margin-top:28px">
-      <div onclick="nextSign()" style="width:64px; height:64px; border-radius:50%; border:5px solid rgba(247,242,234,.3); background:var(--ivory); cursor:pointer"></div></div>
-  </div>`;
-}
-function pickSign(i){ curSign=i; const signs=SIGNS[S.city]||SIGNS.chengdu; $('signInput').value=signs[i]; scanSign(); }
-function nextSign(){ const signs=SIGNS[S.city]||SIGNS.chengdu; curSign=(curSign+1)%signs.length; pickSign(curSign); }
-function scanSign(){
-  const v=$('signInput'); if(!v)return;
-  const chars=[...v.value.trim()].filter(c=>c.trim());
-  let known=0;
-  const rendered=chars.map(c=>{ const k=S.known.has(c); if(k)known++;
-    return `<span class="hz ${k?'known':'newc'}" onclick="speak('${c}')">${c}</span>`}).join('');
-  const unknown=chars.filter(c=>!S.known.has(c));
-  $('signRow').innerHTML=rendered;
-  $('scanResult').innerHTML = chars.length
-    ? `<div>Bạn đọc được <span style="color:var(--jade); font-weight:700">${known}/${chars.length}</span></div>
-       <div style="color:var(--stone); margin-top:4px">${known===chars.length?'🎉 Đọc trọn vẹn tấm biển này.':`Chữ mới: ${unknown.map(c=>`<b style="color:var(--gold)">${c}</b>`).join(', ')} — chạm để học.`}</div>`
-    : '';
-}
-
-/* ===== 08 TONE (DSP) ===== */
+/* ===== 07 TONE (DSP) ===== */
 // sub-nav giữa Luyện (tone) và Bảng tra (pinyin)
 function subNav(cur){
   const item=(s,label)=>`<button onclick="go('${s}')" style="flex:1; padding:9px; cursor:pointer; font-size:12px; font-weight:600; font-family:var(--font-body);
@@ -623,7 +718,8 @@ function scrTone(){
     ? `<div style="text-align:center; margin-top:16px"><div class="h2" style="color:var(--gold); font-size:38px">${toneScore}/100</div>
        <div class="eyebrow" style="color:var(--ivory)">${toneScore>=80?'Tuyệt vời':toneScore>=60?'Khá tốt':'Thử lại nhé'}</div>
        ${toneSim?'<div style="font-size:9px;color:var(--stone);margin-top:4px">(mô phỏng — micro bị từ chối)</div>':''}</div>` : '';
-  return `<div class="scr pad" style="padding-top:24px">
+  return `<div class="scr pad" style="padding-top:44px; position:relative">
+    ${backBtn(false,'atlas')}
     <div class="eyebrow eb-red">AI Acoustics · Real-time</div>
     <div class="h2" style="font-size:26px; margin-top:6px">Luyện thanh điệu</div>
     <div style="font-size:12px; color:var(--stone); margin-top:6px">Điểm yếu số 1 của người học. AI nghe cao độ giọng bạn — và sửa ngay.</div>
@@ -672,7 +768,8 @@ function scrPinyin(){
          <span style="font-size:11px; color:rgba(247,242,234,.8); margin-left:8px">${PINYIN_INITIALS.find(i=>i.sym===pinyinInitial).vi}</span>
          <button onclick="speak('${PINYIN_INITIALS.find(i=>i.sym===pinyinInitial).vi.match(/· (.)/)?.[1]||''}')" style="float:right; background:transparent; border:1px solid var(--gold); color:var(--gold); font-size:11px; padding:3px 9px; cursor:pointer">🔊</button>
        </div>` : '';
-  return `<div class="scr pad" style="padding-top:24px">
+  return `<div class="scr pad" style="padding-top:44px; position:relative">
+    ${backBtn(false,'tone')}
     <div class="eyebrow eb-red">Bảng phiên âm · Pinyin</div>
     <div class="h2" style="font-size:26px; margin-top:6px">Bảng Pinyin</div>
     <div style="font-size:12px; color:var(--stone); margin-top:6px">Thanh mẫu (声母) × vận mẫu (韵母). Chạm để nghe — kèm so sánh tiếng Việt.</div>
@@ -775,7 +872,8 @@ function scrDecode(){
   const opts=q.opts.map((o,i)=>`<div id="dopt${i}" onclick="answerDecode(${i})" style="background:var(--ivory); border:1px solid var(--line); padding:14px; margin-bottom:8px; cursor:pointer; display:flex; align-items:center; gap:12px">
     <span style="width:24px; height:24px; border:1px solid var(--stone); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700">${'ABC'[i]}</span>
     <span style="font-size:14px">${o}</span></div>`).join('');
-  return `<div class="scr pad" style="padding-top:24px">
+  return `<div class="scr pad" style="padding-top:44px; position:relative">
+    ${backBtn(false,'progress')}
     <div class="eyebrow eb-red">Giải mã · Decoding</div>
     <div class="h2" style="font-size:26px; margin-top:6px">Đoán nghĩa<br>từ bộ thủ</div>
     <div style="background:var(--navy); padding:24px; margin-top:20px; color:var(--ivory)">
@@ -813,7 +911,8 @@ function scrProgress(){
       <div style="font-size:10px">${S.cityProgress[k]||0}%</div></div>`}).join('');
   const stats=[['🔥 '+S.streak,'Streak'],[S.xp,'XP'],[S.known.size,'Đã thuộc'],[rads,'Bộ thủ'],[chars,'Chữ'],[S.collected.size+'/6','Thành phố']]
     .map(([n,l])=>`<div style="text-align:center; padding:14px 4px"><div class="h2" style="color:var(--gold); font-size:22px">${n}</div><div style="font-size:9px; color:var(--stone); text-transform:uppercase">${l}</div></div>`).join('');
-  return `<div class="scr pad" style="padding-top:24px">
+  return `<div class="scr pad" style="padding-top:44px; position:relative">
+    ${backBtn(false,'atlas')}
     <div class="eyebrow eb-red">Hành trình của bạn</div>
     <div class="h2" style="font-size:24px; margin-top:6px">Bạn đang đọc<br>được bao nhiêu<br>phần thế giới?</div>
     <div style="background:var(--navy); padding:22px; margin-top:18px; color:var(--ivory); display:flex; gap:18px; align-items:center">
@@ -878,24 +977,89 @@ Trả về DUY NHẤT JSON (không giải thích, không markdown fence):
   if(!DICT[data.newChar]) DICT[data.newChar]={pin:data.newPin,vi:data.newVi};
   return data;
 }
+/* Mẫu câu đã verify — mỗi entry: chữ Hán + nghĩa Việt + ký tự MỚI.
+   Validator i+1: tất cả chữ khác MỚI phải đã thuộc. */
+const SENTENCE_TEMPLATES = [
+  // 2 chữ — giao tiếp
+  { hz:"你好",   vi:"Xin chào",                newC:"好" },
+  { hz:"你好",   vi:"Xin chào",                newC:"你" },
+  // 3 chữ — biểu cảm
+  { hz:"我爱你", vi:"Tôi yêu bạn",             newC:"爱" },
+  { hz:"我爱你", vi:"Tôi yêu bạn",             newC:"你" },
+  // địa danh / khái niệm
+  { hz:"中国",   vi:"Trung Quốc",              newC:"国" },
+  { hz:"中国",   vi:"Trung Quốc",              newC:"中" },
+  { hz:"中国人", vi:"Người Trung Quốc",        newC:"人" },
+  // chỉ dẫn (biển hiệu)
+  { hz:"入口",   vi:"Lối vào",                 newC:"入" },
+  { hz:"入口",   vi:"Lối vào",                 newC:"口" },
+  { hz:"出口",   vi:"Lối ra",                  newC:"出" },
+  // tính chất người
+  { hz:"大人",   vi:"Người lớn",               newC:"大" },
+  { hz:"小人",   vi:"Người nhỏ / kẻ tiểu nhân", newC:"小" },
+  { hz:"女人",   vi:"Phụ nữ",                  newC:"女" },
+  // ẩm thực
+  { hz:"火锅",   vi:"Lẩu (lửa + nồi)",         newC:"锅" },
+  { hz:"火锅",   vi:"Lẩu",                     newC:"火" },
+  { hz:"吃火锅", vi:"Ăn lẩu",                  newC:"吃" },
+  { hz:"好吃",   vi:"Ngon (đồ ăn)",            newC:"吃" },
+  { hz:"好喝",   vi:"Ngon (đồ uống)",          newC:"喝" },
+  { hz:"喝茶",   vi:"Uống trà",                newC:"茶" },
+  { hz:"喝茶",   vi:"Uống trà",                newC:"喝" },
+  { hz:"好辣",   vi:"Cay quá",                 newC:"辣" },
+  { hz:"好辣",   vi:"Cay quá",                 newC:"好" },
+  // tự nhiên
+  { hz:"日月",   vi:"Mặt trời, mặt trăng",     newC:"月" },
+  { hz:"日月",   vi:"Mặt trời, mặt trăng",     newC:"日" },
+  { hz:"山水",   vi:"Núi sông (cảnh thiên nhiên)", newC:"水" },
+  { hz:"山水",   vi:"Núi sông",                newC:"山" },
+  // tiền
+  { hz:"有钱",   vi:"Có tiền (giàu)",          newC:"钱" },
+  // mở rộng HSK1 — trợ động từ & hành động
+  { hz:"我想喝茶", vi:"Tôi muốn uống trà",      newC:"想" },
+  { hz:"我要吃",  vi:"Tôi muốn ăn",            newC:"要" },
+  { hz:"我会说",  vi:"Tôi biết nói",           newC:"说" },
+  { hz:"我会说",  vi:"Tôi biết nói",           newC:"会" },
+  { hz:"我想看",  vi:"Tôi muốn xem",           newC:"看" },
+  { hz:"他是中国人", vi:"Anh ấy là người Trung Quốc", newC:"是" },
+  { hz:"他是中国人", vi:"Anh ấy là người Trung Quốc", newC:"他" },
+  { hz:"我有钱",  vi:"Tôi có tiền",            newC:"有" },
+  { hz:"很好",    vi:"Rất tốt",               newC:"很" },
+  { hz:"我能来",  vi:"Tôi có thể đến",         newC:"能" },
+  { hz:"我能来",  vi:"Tôi có thể đến",         newC:"来" }
+];
+
 function genLocal(){
-  const newPool=["辣","茶","钱","吃","喝","中","国","出","入","小","看","说","想","来","去","上","下"].filter(c=>!S.known.has(c)&&DICT[c]);
-  const nc=newPool[0]||"辣";
-  let hanzi,vi;
-  if(S.known.has("我")&&S.known.has("想")){hanzi="我想"+nc; vi="Tôi muốn "+DICT[nc].vi;}
-  else if(S.known.has("我")&&S.known.has("要")){hanzi="我要"+nc; vi="Tôi cần "+DICT[nc].vi;}
-  else if(S.known.has("我")&&S.known.has("爱")){hanzi="我爱"+nc; vi="Tôi thích "+DICT[nc].vi;}
-  else if(S.known.has("你")&&S.known.has("好")){hanzi="你好"+nc; vi="Chào "+DICT[nc].vi;}
-  else if(S.known.has("火")&&S.known.has("锅")){hanzi="火锅"+nc; vi="Lẩu "+DICT[nc].vi;}
-  else{
-    // base PHẢI là chữ thật trong known (không hard-code 我) để không vi phạm validator i+1.
-    // Ưu tiên 1 bộ thủ tượng hình (có nghĩa rõ) làm ngữ cảnh; nếu known rỗng thì chỉ dùng newChar.
-    const base=[...S.known].find(c=>DICT[c]) || "";
-    hanzi=base+nc;
-    vi=base ? (DICT[base].vi+" · "+DICT[nc].vi) : DICT[nc].vi;
+  /* tìm template hợp lệ: newC chưa thuộc + mọi chữ khác đã thuộc + DICT có newC */
+  for(const t of SENTENCE_TEMPLATES){
+    if(S.known.has(t.newC)) continue;
+    if(!DICT[t.newC]) continue;
+    const chars=[...t.hz];
+    if(chars.indexOf(t.newC)<0) continue;
+    const ok=chars.every(ch=>ch===t.newC||S.known.has(ch));
+    if(!ok) continue;
+    return {
+      hanzi:t.hz,
+      pinyin:chars.map(c=>DICT[c]?.pin||"").join(" "),
+      vi:t.vi,
+      newChar:t.newC,
+      newPin:DICT[t.newC].pin,
+      newVi:DICT[t.newC].vi,
+      story:CITIES[S.city]?.story||""
+    };
   }
-  return { hanzi, pinyin:[...hanzi].map(c=>DICT[c]?.pin||"").join(" "), vi,
-    newChar:nc, newPin:DICT[nc].pin, newVi:DICT[nc].vi, story:CITIES[S.city]?.story||"" };
+  /* fallback an toàn — không tạo câu giả: chỉ giới thiệu 1 chữ mới đứng riêng kèm 1 chữ đã thuộc làm cảnh */
+  const newPool=Object.keys(DICT).filter(c=>!S.known.has(c));
+  const nc=newPool[0]||"辣";
+  const base=[...S.known].find(c=>DICT[c]);
+  const hz=base?base+nc:nc;
+  return {
+    hanzi:hz,
+    pinyin:[...hz].map(c=>DICT[c]?.pin||"").join(" "),
+    vi:base?`${DICT[base].vi} + ${DICT[nc].vi} (ghép tự do)`:DICT[nc].vi,
+    newChar:nc, newPin:DICT[nc].pin, newVi:DICT[nc].vi,
+    story:CITIES[S.city]?.story||""
+  };
 }
 
 /* ===== 8. SETTINGS ===== */
