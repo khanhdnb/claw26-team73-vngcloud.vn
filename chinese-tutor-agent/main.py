@@ -23,6 +23,7 @@ from greennode_agentbase import (
 
 import poetry
 import pinyin_data
+import vocab
 
 load_dotenv()
 
@@ -97,7 +98,7 @@ Quy tắc thứ tự nét: từ trên xuống, trái sang phải.
 - Giao tiếp: 言(讠) 走 车 食(饣)
 Mỗi bộ thủ: nghĩa + 2-3 chữ ví dụ.
 
-### MODULE 4 — Học theo bài (HSK1→HSK3)
+### MODULE 4 — Học theo bài (HSK1→HSK6)
 Cấu trúc mỗi bài:
 1. **Từ vựng**: 5-8 từ + pinyin + nghĩa + bộ thủ liên quan
 2. **Mẫu câu**: 3-5 mẫu thực dụng
@@ -106,6 +107,11 @@ Cấu trúc mỗi bài:
 Pinyin + bộ thủ được nhắc lại xuyên suốt.
 
 Chủ đề: Chào hỏi → Gia đình → Số đếm/ngày giờ → Mua sắm → Giao thông → Thời tiết → Công việc
+
+**Từ vựng HSK chính thức (5363 từ, HSK 3.0 cấp 1-6):**
+- Khi user hỏi nghĩa/pinyin/cấp HSK của một từ → **GỌI tool `search_vocab`** (tra theo chữ Hán, pinyin, hoặc nghĩa).
+- Khi user muốn học/ôn từ vựng theo cấp → **GỌI tool `hsk_wordlist(level)`** lấy từ phổ biến nhất cấp đó.
+- Nghĩa trong tool là tiếng Anh → LUÔN dịch sang tiếng Việt khi trả lời, kèm pinyin + bộ thủ.
 
 ### MODULE 5 — Thơ ca & Kinh điển (nâng cao, HSK4+)
 Dành cho người học khá, muốn tiếp cận văn học cổ điển Hán văn.
@@ -131,6 +137,41 @@ Khi user bắt đầu, hỏi 2 câu:
 - Giữ đơn giản, dễ đọc trên chat"""
 
 # --- Tools ---
+@tool
+def search_vocab(query: str, level: int = 0) -> str:
+    """Tra từ vựng HSK (chính thức HSK 3.0, 5363 từ, level 1-6).
+
+    Dùng khi user hỏi về một từ tiếng Trung, muốn biết pinyin/nghĩa/level HSK của từ,
+    hoặc muốn học từ vựng theo cấp độ. query có thể là: chữ Hán (好), pinyin (hǎo / hao),
+    hoặc nghĩa tiếng Anh (good). level=0 tra mọi cấp; level=1..6 lọc theo cấp HSK.
+    LƯU Ý: nghĩa trả về là tiếng Anh — hãy DỊCH sang tiếng Việt khi trả lời user.
+    """
+    results = vocab.search_vocab(query, level=level, limit=8)
+    if not results:
+        scope = f" ở HSK{level}" if level else ""
+        return f"Không tìm thấy từ nào khớp '{query}'{scope} trong bộ HSK."
+    lines = []
+    for e in results:
+        lines.append(f"{e['s']} ({e['p']}) · HSK{e['l']} · bộ {e['r']} — {e['m']}")
+    return "\n".join(lines)
+
+
+@tool
+def hsk_wordlist(level: int) -> str:
+    """Lấy danh sách từ vựng phổ biến nhất của một cấp HSK (1-6).
+
+    Dùng khi user muốn học/ôn từ vựng theo cấp độ HSK cụ thể.
+    Trả về ~20 từ thông dụng nhất của cấp đó (sort theo tần suất). Nghĩa tiếng Anh → dịch sang Việt khi trả lời.
+    """
+    if level < 1 or level > 6:
+        return "Cấp HSK phải từ 1 đến 6."
+    words = vocab.by_level(level, limit=20)
+    lines = [f"20 từ phổ biến nhất HSK{level}:"]
+    for e in words:
+        lines.append(f"{e['s']} ({e['p']}) — {e['m'][:50]}")
+    return "\n".join(lines)
+
+
 @tool
 def get_stroke_order(character: str) -> str:
     """Tra thứ tự nét viết của một chữ Hán."""
@@ -203,7 +244,7 @@ class AgentState(TypedDict):
     messages: Annotated[list, add_messages]
 
 
-tools = [pinyin_chart, get_stroke_order, get_radical_info, search_poem]
+tools = [pinyin_chart, get_stroke_order, get_radical_info, search_poem, search_vocab, hsk_wordlist]
 llm_with_tools = llm.bind_tools(tools)
 
 

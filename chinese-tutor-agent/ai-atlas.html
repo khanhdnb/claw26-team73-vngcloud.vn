@@ -146,7 +146,16 @@ const DICT = {
   "辣":{pin:"là",vi:"cay"}, "钱":{pin:"qián",vi:"tiền"},
   "林":{pin:"lín",vi:"rừng",comp:["木","木"],decode:true}, "明":{pin:"míng",vi:"sáng",comp:["日","月"],decode:true},
   "炎":{pin:"yán",vi:"nóng/viêm",comp:["火","火"],decode:true}, "休":{pin:"xiū",vi:"nghỉ ngơi",comp:["人","木"],decode:true},
-  "品":{pin:"pǐn",vi:"phẩm/món",comp:["口","口","口"],decode:true}
+  "品":{pin:"pǐn",vi:"phẩm/món",comp:["口","口","口"],decode:true},
+  // Mở rộng từ HSK1 (nguồn: complete-hsk-vocabulary) — chữ đơn phổ biến, nghĩa tiếng Việt
+  "是":{pin:"shì",vi:"là"}, "不":{pin:"bù",vi:"không"}, "有":{pin:"yǒu",vi:"có"},
+  "他":{pin:"tā",vi:"anh ấy"}, "她":{pin:"tā",vi:"cô ấy"}, "们":{pin:"men",vi:"(số nhiều)"},
+  "在":{pin:"zài",vi:"ở/đang"}, "这":{pin:"zhè",vi:"này"}, "那":{pin:"nà",vi:"kia/đó"},
+  "来":{pin:"lái",vi:"đến"}, "去":{pin:"qù",vi:"đi"}, "说":{pin:"shuō",vi:"nói"},
+  "要":{pin:"yào",vi:"muốn/cần"}, "想":{pin:"xiǎng",vi:"nghĩ/muốn"}, "会":{pin:"huì",vi:"biết/sẽ"},
+  "能":{pin:"néng",vi:"có thể"}, "给":{pin:"gěi",vi:"cho"}, "看":{pin:"kàn",vi:"xem/nhìn"},
+  "很":{pin:"hěn",vi:"rất"}, "也":{pin:"yě",vi:"cũng"}, "都":{pin:"dōu",vi:"đều"},
+  "一":{pin:"yī",vi:"một"}, "上":{pin:"shàng",vi:"trên/lên"}, "下":{pin:"xià",vi:"dưới/xuống"}
 };
 const CITIES = {
   chengdu:{name:"CHENGDU",cn:"成都",topic:"Ẩm thực",seed:["火","锅","辣","茶","吃","喝","水","口"],story:"Hẻm Chengdu, hơi nồi lẩu bốc lên giữa lồng đèn đỏ."},
@@ -870,10 +879,12 @@ Trả về DUY NHẤT JSON (không giải thích, không markdown fence):
   return data;
 }
 function genLocal(){
-  const newPool=["辣","茶","钱","吃","喝","中","国","出","入","小"].filter(c=>!S.known.has(c)&&DICT[c]);
+  const newPool=["辣","茶","钱","吃","喝","中","国","出","入","小","看","说","想","来","去","上","下"].filter(c=>!S.known.has(c)&&DICT[c]);
   const nc=newPool[0]||"辣";
   let hanzi,vi;
-  if(S.known.has("我")&&S.known.has("爱")){hanzi="我爱"+nc; vi="Tôi thích "+DICT[nc].vi;}
+  if(S.known.has("我")&&S.known.has("想")){hanzi="我想"+nc; vi="Tôi muốn "+DICT[nc].vi;}
+  else if(S.known.has("我")&&S.known.has("要")){hanzi="我要"+nc; vi="Tôi cần "+DICT[nc].vi;}
+  else if(S.known.has("我")&&S.known.has("爱")){hanzi="我爱"+nc; vi="Tôi thích "+DICT[nc].vi;}
   else if(S.known.has("你")&&S.known.has("好")){hanzi="你好"+nc; vi="Chào "+DICT[nc].vi;}
   else if(S.known.has("火")&&S.known.has("锅")){hanzi="火锅"+nc; vi="Lẩu "+DICT[nc].vi;}
   else{
