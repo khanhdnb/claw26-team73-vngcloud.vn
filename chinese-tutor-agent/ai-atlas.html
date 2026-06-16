@@ -173,6 +173,51 @@ const TONES = {
   3:{label:"mǎ",name:"Thanh 3 · xuống rồi lên",c:[0.6,0.34,0.2,0.4,0.66]},
   4:{label:"mà",name:"Thanh 4 · đi xuống",c:[0.92,0.72,0.5,0.3,0.12]}
 };
+// Âm tiết luyện — mỗi thanh gắn 1 CHỮ HÁN THẬT để Web Speech đọc đúng cao độ
+// (đọc 妈/马 ra đúng thanh; đọc 'mā' rời thì sai). Pinyin chuẩn, đã verify ngôn ngữ học.
+const PRACTICE_SYLLABLES = {
+  ma:{1:{han:"妈",tag:"mā",vi:"mẹ"},2:{han:"麻",tag:"má",vi:"gai/tê"},3:{han:"马",tag:"mǎ",vi:"ngựa"},4:{han:"骂",tag:"mà",vi:"mắng"}},
+  ba:{1:{han:"八",tag:"bā",vi:"tám"},2:{han:"拔",tag:"bá",vi:"nhổ"},3:{han:"把",tag:"bǎ",vi:"cầm"},4:{han:"爸",tag:"bà",vi:"bố"}},
+  hao:{1:{han:"蒿",tag:"hāo",vi:"ngải"},2:{han:"豪",tag:"háo",vi:"hào"},3:{han:"好",tag:"hǎo",vi:"tốt"},4:{han:"号",tag:"hào",vi:"số/hiệu"}},
+  shi:{1:{han:"师",tag:"shī",vi:"thầy"},2:{han:"十",tag:"shí",vi:"mười"},3:{han:"史",tag:"shǐ",vi:"sử"},4:{han:"是",tag:"shì",vi:"là"}},
+  xie:{1:{han:"些",tag:"xiē",vi:"vài"},2:{han:"鞋",tag:"xié",vi:"giày"},3:{han:"写",tag:"xiě",vi:"viết"},4:{han:"谢",tag:"xiè",vi:"cảm ơn"}}
+};
+// Bảng pinyin tra cứu (Yabla-style) — initials × finals, đã verify ngôn ngữ học.
+const PINYIN_INITIALS = [
+  {sym:"b",group:"Song môi (labial)",vi:"như 'p' tiếng Việt (KHÔNG bật hơi) · 包 bāo"},
+  {sym:"p",group:"Song môi (labial)",vi:"như 'p' BẬT HƠI mạnh · 怕 pà"},
+  {sym:"m",group:"Song môi (labial)",vi:"như 'm' tiếng Việt · 妈 mā"},
+  {sym:"f",group:"Song môi (labial)",vi:"như 'ph' tiếng Việt · 发 fā"},
+  {sym:"d",group:"Đầu lưỡi (alveolar)",vi:"như 't' (KHÔNG bật hơi) · 大 dà"},
+  {sym:"t",group:"Đầu lưỡi (alveolar)",vi:"như 'th' bật hơi · 他 tā"},
+  {sym:"n",group:"Đầu lưỡi (alveolar)",vi:"như 'n' tiếng Việt · 你 nǐ"},
+  {sym:"l",group:"Đầu lưỡi (alveolar)",vi:"như 'l' tiếng Việt · 来 lái"},
+  {sym:"g",group:"Cuống lưỡi (velar)",vi:"như 'c/k' (KHÔNG bật hơi) · 高 gāo"},
+  {sym:"k",group:"Cuống lưỡi (velar)",vi:"như 'kh' bật hơi mạnh · 开 kāi"},
+  {sym:"h",group:"Cuống lưỡi (velar)",vi:"như 'h' cọ họng (gần 'kh' nhẹ) · 好 hǎo"},
+  {sym:"j",group:"Mặt lưỡi (palatal)",vi:"như 'ch' mềm, lưỡi sát răng dưới · 鸡 jī"},
+  {sym:"q",group:"Mặt lưỡi (palatal)",vi:"như 'ch' bật hơi · 七 qī"},
+  {sym:"x",group:"Mặt lưỡi (palatal)",vi:"như 'x/s' mềm, lưỡi sát ngạc · 西 xī"},
+  {sym:"zh",group:"Uốn lưỡi (retroflex)",vi:"'tr' uốn lưỡi (KHÔNG bật hơi) · 中 zhōng"},
+  {sym:"ch",group:"Uốn lưỡi (retroflex)",vi:"'tr' uốn lưỡi BẬT HƠI · 吃 chī"},
+  {sym:"sh",group:"Uốn lưỡi (retroflex)",vi:"'s' uốn lưỡi · 是 shì"},
+  {sym:"r",group:"Uốn lưỡi (retroflex)",vi:"'r' uốn lưỡi (gần 'r' tiếng Anh) · 日 rì"},
+  {sym:"z",group:"Xuýt (sibilant)",vi:"'ts' đầu lưỡi sát răng (KHÔNG bật hơi) · 字 zì"},
+  {sym:"c",group:"Xuýt (sibilant)",vi:"'ts' BẬT HƠI mạnh · 次 cì"},
+  {sym:"s",group:"Xuýt (sibilant)",vi:"như 'x/s' đầu lưỡi sát răng · 四 sì"}
+];
+// Vận mẫu chính + 1 chữ Hán ví dụ (để Web Speech đọc đúng) cho âm tiết khi tap
+const PINYIN_FINALS = [
+  {sym:"a",vi:"'a' như 'ba'",ex:"啊"},{sym:"o",vi:"'ô-o' tròn môi",ex:"哦"},{sym:"e",vi:"'ơ/ưa' không tròn môi",ex:"鹅"},
+  {sym:"i",vi:"'i'; sau zh/ch/sh/r/z/c/s → âm mờ 'ư'",ex:"一"},{sym:"u",vi:"'u' tròn môi",ex:"五"},{sym:"ü",vi:"'uy' tròn môi; sau j/q/x/y viết u, sau l/n giữ ü",ex:"鱼"},
+  {sym:"ai",vi:"'ai'",ex:"爱"},{sym:"ei",vi:"'ây' (mây)",ex:"杯"},{sym:"ao",vi:"'ao'",ex:"奥"},{sym:"ou",vi:"'ô-u'",ex:"欧"},
+  {sym:"an",vi:"'an'",ex:"安"},{sym:"en",vi:"'ân'",ex:"恩"},{sym:"ang",vi:"'ang'",ex:"昂"},{sym:"eng",vi:"'âng'",ex:"灯"},{sym:"ong",vi:"'ung' tròn môi",ex:"中"},{sym:"er",vi:"'ơ' uốn lưỡi",ex:"二"},
+  {sym:"ia/ya",vi:"'i-a'",ex:"呀"},{sym:"ie/ye",vi:"'i-ê' (tiên)",ex:"也"},{sym:"iao/yao",vi:"'i-ao'",ex:"要"},{sym:"iu/you",vi:"'i-âu'",ex:"有"},
+  {sym:"ian/yan",vi:"'i-en' (iên)",ex:"言"},{sym:"in/yin",vi:"'in'",ex:"音"},{sym:"iang/yang",vi:"'i-ang'",ex:"羊"},{sym:"ing/ying",vi:"'inh'",ex:"英"},{sym:"iong/yong",vi:"'i-ung'",ex:"用"},
+  {sym:"ua/wa",vi:"'u-a'",ex:"挖"},{sym:"uo/wo",vi:"'u-ô'",ex:"我"},{sym:"uai/wai",vi:"'u-ai'",ex:"外"},{sym:"ui/wei",vi:"'u-ây'",ex:"为"},
+  {sym:"uan/wan",vi:"'u-an'",ex:"完"},{sym:"un/wen",vi:"'u-ân'",ex:"问"},{sym:"uang/wang",vi:"'u-ang'",ex:"王"},
+  {sym:"üe/yue",vi:"'uy-ê'; sau j/q/x viết ue",ex:"月"},{sym:"üan/yuan",vi:"'uy-en'; sau j/q/x viết uan",ex:"元"},{sym:"ün/yun",vi:"'uyn'; sau j/q/x viết un",ex:"云"}
+];
 const COMMON_TARGET=50, ENGINE_THRESHOLD=12;
 const CITY_COORDS={beijing:{x:228,y:80},xian:{x:160,y:135},shanghai:{x:265,y:175},chengdu:{x:110,y:175},hangzhou:{x:248,y:200},guilin:{x:180,y:240}};
 const CITY_ORDER=["chengdu","shanghai","beijing","hangzhou","xian","guilin"];
@@ -202,7 +247,9 @@ function saveCfg(){ localStorage.setItem('aiatlas_cfg', JSON.stringify(CFG)); }
 
 /* ===== tone local state ===== */
 let curTone=2, userContour=null, toneScore=null, toneSim=false, recording=false;
+let curSyl='ma';                 // âm tiết đang luyện (preset)
 let curSign=0;
+let pinyinInitial=null;          // initial đang chọn ở bảng tra cứu (null = chưa chọn)
 
 /* ===== utils ===== */
 const $=id=>document.getElementById(id);
@@ -235,6 +282,7 @@ function render(){
     case 'lesson': v.innerHTML=scrLessonShell(); maybeGenerate(); break;
     case 'camera': v.innerHTML=scrCamera(); setTimeout(scanSign,30); break;
     case 'tone': v.innerHTML=scrTone(); setTimeout(drawTone,30); break;
+    case 'pinyin': v.innerHTML=scrPinyin(); break;
     case 'decode': v.innerHTML=scrDecode(); break;
     case 'progress': v.innerHTML=scrProgress(); break;
   }
@@ -252,9 +300,12 @@ function renderTabbar(){
   tb.style.display = hide?'none':'flex';
   tb.className = DARK_SCREENS.has(S.current)?'dark':'';
   if(hide){ tb.innerHTML=''; return; }
-  tb.innerHTML = TABS.map(t=>
-    `<button class="${S.current===t.s?'active':''}" onclick="go('${t.s}')">
-       <span class="ic">${t.ic}</span>${t.label}</button>`).join('');
+  tb.innerHTML = TABS.map(t=>{
+    // 'pinyin' là nhánh con của tab 'tone' (Phát âm) → cùng active state
+    const active = S.current===t.s || (t.s==='tone' && S.current==='pinyin');
+    return `<button class="${active?'active':''}" onclick="go('${t.s}')">
+       <span class="ic">${t.ic}</span>${t.label}</button>`;
+  }).join('');
 }
 function go(s){ S.current=s; render(); }
 
@@ -538,11 +589,27 @@ function scanSign(){
 }
 
 /* ===== 08 TONE (DSP) ===== */
+// sub-nav giữa Luyện (tone) và Bảng tra (pinyin)
+function subNav(cur){
+  const item=(s,label)=>`<button onclick="go('${s}')" style="flex:1; padding:9px; cursor:pointer; font-size:12px; font-weight:600; font-family:var(--font-body);
+    ${cur===s?'background:var(--red); color:var(--ivory)':'background:transparent; color:var(--stone); border:1px solid var(--line)'}">${label}</button>`;
+  return `<div style="display:flex; gap:0; margin-top:14px">${item('tone','Luyện thanh')}${item('pinyin','Bảng Pinyin')}</div>`;
+}
+
 function scrTone(){
   const t=TONES[curTone];
-  const toneBtns=Object.entries(TONES).map(([k,v])=>
-    `<button onclick="pickTone(${k})" style="flex:1; padding:12px; cursor:pointer; font-family:var(--font-han); font-size:18px;
-      ${+k===curTone?'border:1px solid var(--gold); background:rgba(212,178,122,.15); color:var(--gold)':'border:1px solid rgba(255,255,255,.15); background:none; color:var(--ivory)'}">${v.label}</button>`).join('');
+  const syl=PRACTICE_SYLLABLES[curSyl];
+  const cur=syl[curTone];                       // {han, tag, vi} của âm+thanh hiện tại
+  // picker âm tiết
+  const sylChips=Object.keys(PRACTICE_SYLLABLES).map(k=>
+    `<button onclick="pickSyl('${k}')" style="padding:7px 14px; cursor:pointer; font-size:14px; font-weight:600;
+      ${k===curSyl?'background:var(--red); color:var(--ivory)':'border:1px solid var(--line); background:transparent; color:var(--navy)'}">${k}</button>`).join('');
+  // 4 nút thanh — hiện chữ Hán thật cho âm tiết đang chọn
+  const toneBtns=Object.entries(TONES).map(([k,v])=>{
+    const h=syl[k];
+    return `<button onclick="pickTone(${k})" style="flex:1; padding:10px 4px; cursor:pointer; font-family:var(--font-han); font-size:20px;
+      ${+k===curTone?'border:1px solid var(--gold); background:rgba(212,178,122,.15); color:var(--gold)':'border:1px solid rgba(255,255,255,.15); background:none; color:var(--ivory)'}">${h.han}<div style="font-size:9px; font-family:var(--font-body); font-style:italic">${h.tag}</div></button>`;
+  }).join('');
   const scoreBlock = toneScore!=null
     ? `<div style="text-align:center; margin-top:16px"><div class="h2" style="color:var(--gold); font-size:38px">${toneScore}/100</div>
        <div class="eyebrow" style="color:var(--ivory)">${toneScore>=80?'Tuyệt vời':toneScore>=60?'Khá tốt':'Thử lại nhé'}</div>
@@ -551,20 +618,67 @@ function scrTone(){
     <div class="eyebrow eb-red">AI Acoustics · Real-time</div>
     <div class="h2" style="font-size:26px; margin-top:6px">Luyện thanh điệu</div>
     <div style="font-size:12px; color:var(--stone); margin-top:6px">Điểm yếu số 1 của người học. AI nghe cao độ giọng bạn — và sửa ngay.</div>
-    <div style="background:var(--navy); padding:24px; margin-top:20px; color:var(--ivory)">
-      <div class="han" style="font-size:54px; text-align:center; color:var(--gold)" onclick="speak('${t.label.replace(/[āáǎàēéěè...]/g,'a')}')">${t.label}</div>
-      <div class="eyebrow" style="text-align:center; color:rgba(247,242,234,.7); margin-top:4px">${t.name}</div>
+    ${subNav('tone')}
+    <div class="eyebrow eb-muted" style="margin-top:16px">Chọn âm tiết</div>
+    <div style="display:flex; gap:7px; margin-top:8px; flex-wrap:wrap">${sylChips}</div>
+    <div style="background:var(--navy); padding:24px; margin-top:16px; color:var(--ivory)">
+      <div class="han" style="font-size:56px; text-align:center; color:var(--gold); cursor:pointer" onclick="speak('${cur.han}')">${cur.han}</div>
+      <div style="text-align:center; margin-top:2px"><span class="pin" style="color:var(--gold); font-size:16px">${cur.tag}</span>
+        <span style="color:var(--stone); font-size:12px"> · ${cur.vi}</span></div>
+      <div class="eyebrow" style="text-align:center; color:rgba(247,242,234,.6); margin-top:6px">${t.name}</div>
+      <button onclick="speak('${cur.han}')" style="display:block; margin:12px auto 0; padding:7px 16px; cursor:pointer; background:transparent; border:1px solid var(--gold); color:var(--gold); font-size:12px; font-weight:600">🔊 Nghe mẫu chuẩn</button>
       <div style="display:flex; gap:6px; margin-top:16px">${toneBtns}</div>
       <canvas id="tonecv" width="320" height="140" style="width:100%; height:140px; margin-top:16px"></canvas>
       <div style="display:flex; gap:16px; justify-content:center; font-size:9px; color:var(--stone)">
         <span>┄┄ Mẫu chuẩn</span><span style="color:var(--gold)">━━ Giọng bạn</span></div>
       ${scoreBlock}
     </div>
-    <button class="btn btn-red" id="recBtn" onclick="recordTone()" style="margin-top:18px">${recording?'● ĐANG NGHE…':`🎤 NHẤN ĐỂ NÓI '${t.label}'`}</button>
-    <div style="font-size:10px; color:var(--stone); margin-top:10px; text-align:center">AI phát hiện cao độ real-time qua autocorrelation.</div>
+    <button class="btn btn-red" id="recBtn" onclick="recordTone()" style="margin-top:18px">${recording?'● ĐANG NGHE…':`🎤 NHẤN ĐỂ NÓI '${cur.tag}'`}</button>
+    <div style="font-size:10px; color:var(--stone); margin-top:10px; text-align:center">AI phát hiện cao độ real-time qua autocorrelation. Nghe mẫu = chữ Hán thật (đọc đúng thanh).</div>
   </div>`;
 }
 function pickTone(k){ curTone=k; userContour=null; toneScore=null; render(); }
+function pickSyl(k){ curSyl=k; userContour=null; toneScore=null; render(); }
+
+/* ===== BẢNG PINYIN tra cứu (Yabla-style, adapt mobile) ===== */
+function scrPinyin(){
+  // nhóm initials theo group (accordion phẳng — hiện tất cả, nhóm bằng tiêu đề)
+  const groups={};
+  PINYIN_INITIALS.forEach(it=>{ (groups[it.group]=groups[it.group]||[]).push(it); });
+  const initBlocks=Object.entries(groups).map(([g,items])=>
+    `<div class="eyebrow eb-muted" style="margin:16px 0 8px">${g}</div>
+     ${items.map(it=>`<div onclick="pickPinyinInitial('${it.sym}')" style="display:flex; align-items:center; gap:12px; padding:11px 12px; margin-bottom:1px; cursor:pointer;
+        ${it.sym===pinyinInitial?'background:var(--navy); color:var(--ivory)':'background:var(--ivory); border:1px solid var(--line)'}">
+        <span class="han" style="font-size:22px; min-width:34px; color:${it.sym===pinyinInitial?'var(--gold)':'var(--red)'}">${it.sym}</span>
+        <span style="font-size:11px; color:${it.sym===pinyinInitial?'rgba(247,242,234,.85)':'var(--stone)'}">${it.vi}</span></div>`).join('')}`
+  ).join('');
+  // finals: tap để nghe chữ ví dụ (ghép initial nếu đã chọn thì đọc âm tiết tương ứng, không thì đọc chữ ví dụ của final)
+  const finalChips=PINYIN_FINALS.map(f=>
+    `<div onclick="speak('${f.ex}')" title="${f.vi}" style="display:inline-flex; flex-direction:column; align-items:center; cursor:pointer; padding:8px 10px; margin:0 6px 6px 0; border:1px solid var(--line); min-width:62px">
+      <span class="pin" style="font-style:normal; font-size:14px; color:var(--navy); font-weight:600">${f.sym.split('/')[0]}</span>
+      <span class="han" style="font-size:18px; color:var(--red)">${f.ex}</span></div>`).join('');
+  const initHint = pinyinInitial
+    ? `<div style="background:var(--navy); color:var(--ivory); padding:12px 14px; margin-top:10px">
+         <span class="han" style="color:var(--gold); font-size:20px">${pinyinInitial}</span>
+         <span style="font-size:11px; color:rgba(247,242,234,.8); margin-left:8px">${PINYIN_INITIALS.find(i=>i.sym===pinyinInitial).vi}</span>
+         <button onclick="speak('${PINYIN_INITIALS.find(i=>i.sym===pinyinInitial).vi.match(/· (.)/)?.[1]||''}')" style="float:right; background:transparent; border:1px solid var(--gold); color:var(--gold); font-size:11px; padding:3px 9px; cursor:pointer">🔊</button>
+       </div>` : '';
+  return `<div class="scr pad" style="padding-top:24px">
+    <div class="eyebrow eb-red">Bảng phiên âm · Pinyin</div>
+    <div class="h2" style="font-size:26px; margin-top:6px">Bảng Pinyin</div>
+    <div style="font-size:12px; color:var(--stone); margin-top:6px">Thanh mẫu (声母) × vận mẫu (韵母). Chạm để nghe — kèm so sánh tiếng Việt.</div>
+    ${subNav('pinyin')}
+    <div class="eyebrow eb-muted" style="margin-top:18px">21 Thanh mẫu (声母 · Initials)</div>
+    ${initBlocks}
+    ${initHint}
+    <div class="eyebrow eb-muted" style="margin:22px 0 8px">Vận mẫu (韵母 · Finals) — chạm để nghe</div>
+    <div style="display:flex; flex-wrap:wrap">${finalChips}</div>
+    <div style="font-size:11px; color:var(--stone); margin-top:16px; line-height:1.5">
+      <b>Quy tắc:</b> i→yi, u→wu, ü→yu khi đứng một mình · ü sau j/q/x viết "u", sau l/n giữ "ü" (lü 绿) ·
+      4 thanh: <span class="han">mā má mǎ mà</span> + thanh nhẹ. Luyện thanh điệu ở tab "Luyện thanh".</div>
+  </div>`;
+}
+function pickPinyinInitial(s){ pinyinInitial = (pinyinInitial===s)?null:s; render(); }
 
 function autoCorrelate(buf, sampleRate){
   let SIZE=buf.length, rms=0;
