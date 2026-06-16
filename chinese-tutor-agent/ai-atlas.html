@@ -762,7 +762,13 @@ function genLocal(){
   if(S.known.has("我")&&S.known.has("爱")){hanzi="我爱"+nc; vi="Tôi thích "+DICT[nc].vi;}
   else if(S.known.has("你")&&S.known.has("好")){hanzi="你好"+nc; vi="Chào "+DICT[nc].vi;}
   else if(S.known.has("火")&&S.known.has("锅")){hanzi="火锅"+nc; vi="Lẩu "+DICT[nc].vi;}
-  else{ const base=["我","你"].find(c=>S.known.has(c))||"我"; hanzi=base+nc; vi="… "+DICT[nc].vi; }
+  else{
+    // base PHẢI là chữ thật trong known (không hard-code 我) để không vi phạm validator i+1.
+    // Ưu tiên 1 bộ thủ tượng hình (có nghĩa rõ) làm ngữ cảnh; nếu known rỗng thì chỉ dùng newChar.
+    const base=[...S.known].find(c=>DICT[c]) || "";
+    hanzi=base+nc;
+    vi=base ? (DICT[base].vi+" · "+DICT[nc].vi) : DICT[nc].vi;
+  }
   return { hanzi, pinyin:[...hanzi].map(c=>DICT[c]?.pin||"").join(" "), vi,
     newChar:nc, newPin:DICT[nc].pin, newVi:DICT[nc].vi, story:CITIES[S.city]?.story||"" };
 }
