@@ -20,6 +20,7 @@ from greennode_agentbase import (
 )
 
 import poetry
+import pinyin_data
 
 load_dotenv()
 
@@ -55,6 +56,9 @@ SYSTEM_PROMPT = """Bạn là **Thầy Trung** — gia sư dạy tiếng Trung th
 - Âm đầu (声母): b p m f / d t n l / g k h / j q x / zh ch sh r / z c s / y w
 - Âm cuối (韵母): các vần cơ bản và kết hợp
 - Quy tắc đánh dấu thanh điệu
+- **GỌI tool `pinyin_chart`** khi user hỏi cách phát âm 1 âm cụ thể, quy tắc thanh điệu, âm đặc biệt
+  (zhi/chi/shi, yi/wu/yu, ü), hoặc muốn xem bảng pinyin — để lấy mô tả chuẩn + so sánh tiếng Việt.
+  Lưu ý cặp người Việt hay nhầm: b/p d/t g/k (bật hơi), zh/ch/sh vs z/c/s (uốn lưỡi), j/q/x.
 
 ### MODULE 2 — 8 Nét cơ bản
 1. 横 héng — nét ngang (一 二 三)
@@ -129,6 +133,18 @@ def get_stroke_order(character: str) -> str:
 
 
 @tool
+def pinyin_chart(query: str = "") -> str:
+    """Tra bảng phiên âm Pinyin: thanh mẫu (initials), vận mẫu (finals), thanh điệu, âm đặc biệt.
+
+    Dùng khi user hỏi về phát âm, cách đọc một âm pinyin, quy tắc thanh điệu, hoặc muốn xem bảng pinyin.
+    query có thể là: một thanh mẫu (vd 'zh', 'q', 'x'), 'thanh điệu', 'đặc biệt' (zhi/yi/ü...),
+    'nhầm' (cặp dễ lẫn), hoặc để trống/'bảng' để xem toàn bộ.
+    Kèm so sánh với âm tiếng Việt.
+    """
+    return pinyin_data.lookup(query)
+
+
+@tool
 def search_poem(query: str) -> str:
     """Tra cứu thơ ca / kinh điển Hán văn cổ (Thi Kinh, Luận Ngữ, Đường Thi 300 bài, Tam Tự Kinh).
 
@@ -170,7 +186,7 @@ class AgentState(TypedDict):
     messages: Annotated[list, add_messages]
 
 
-tools = [get_stroke_order, get_radical_info, search_poem]
+tools = [pinyin_chart, get_stroke_order, get_radical_info, search_poem]
 llm_with_tools = llm.bind_tools(tools)
 
 
