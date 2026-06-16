@@ -24,6 +24,7 @@ from greennode_agentbase import (
 import poetry
 import pinyin_data
 import vocab
+import grammar
 
 load_dotenv()
 
@@ -113,6 +114,13 @@ Chủ đề: Chào hỏi → Gia đình → Số đếm/ngày giờ → Mua sắ
 - Khi user muốn học/ôn từ vựng theo cấp → **GỌI tool `hsk_wordlist(level)`** lấy từ phổ biến nhất cấp đó.
 - Nghĩa trong tool là tiếng Anh → LUÔN dịch sang tiếng Việt khi trả lời, kèm pinyin + bộ thủ.
 
+**Ngữ pháp HSK 1-4 (giáo trình tiếng Việt):**
+- Khi user hỏi về điểm/cấu trúc ngữ pháp, cách dùng trợ từ/phó từ/liên từ, so sánh cấu trúc dễ nhầm
+  (了 vs 过, 不 vs 没, 会/能/可以, 被 bị động, bổ ngữ kết quả...), hoặc ôn HSK → **GỌI tool `search_grammar`**.
+- Khi user muốn xem danh sách chủ đề ngữ pháp một cấp → **GỌI tool `grammar_topics(level)`**.
+- Dựa trên nội dung tool trả về, giảng lại theo cấu trúc: **Công thức → Ý nghĩa → Ví dụ (Hán+pinyin+nghĩa) → Lưu ý/lỗi thường gặp**.
+- Có thể tạo bài tập (điền từ, sửa lỗi, dịch, trắc nghiệm, sắp xếp câu) khi user yêu cầu, kèm đáp án + giải thích.
+
 ### MODULE 5 — Thơ ca & Kinh điển (nâng cao, HSK4+)
 Dành cho người học khá, muốn tiếp cận văn học cổ điển Hán văn.
 Kho có sẵn: **Thi Kinh (诗经)**, **Luận Ngữ (论语)**, **Đường Thi 300 bài (唐诗三百首)**, **Tam Tự Kinh (三字经)**.
@@ -137,6 +145,34 @@ Khi user bắt đầu, hỏi 2 câu:
 - Giữ đơn giản, dễ đọc trên chat"""
 
 # --- Tools ---
+@tool
+def search_grammar(query: str, level: int = 0) -> str:
+    """Tra điểm ngữ pháp tiếng Trung HSK 1-4 (giáo trình tiếng Việt).
+
+    Dùng khi user hỏi về một điểm/cấu trúc ngữ pháp, cách dùng một trợ từ/phó từ/liên từ,
+    so sánh các cấu trúc dễ nhầm (了 vs 过, 不 vs 没, 会/能/可以, 被 bị động...), hoặc ôn HSK.
+    query: từ khóa tiếng Việt (vd 'câu bị động', 'bổ ngữ kết quả'), chữ Hán (被, 了, 把),
+    hoặc tên cấu trúc. level=0 mọi cấp; 1..4 lọc theo cấp HSK.
+    Trả về nội dung ngữ pháp (cấu trúc + ví dụ Hán/pinyin/nghĩa) để bạn giảng lại cho user.
+    """
+    results = grammar.search_grammar(query, level=level, limit=3)
+    if not results:
+        scope = f" ở HSK{level}" if level else ""
+        return f"Không tìm thấy điểm ngữ pháp khớp '{query}'{scope} trong HSK 1-4."
+    return "\n\n---\n\n".join(f"[HSK{s['level']}] {s['body']}" for s in results)
+
+
+@tool
+def grammar_topics(level: int) -> str:
+    """Liệt kê các chủ đề ngữ pháp của một cấp HSK (1-4) để user chọn học."""
+    if level < 1 or level > 4:
+        return "Ngữ pháp có sẵn cho HSK 1-4."
+    topics = grammar.list_topics(level)
+    if not topics:
+        return f"Chưa có dữ liệu ngữ pháp HSK{level}."
+    return f"Các chủ đề ngữ pháp HSK{level}:\n" + "\n".join(f"- {t}" for t in topics)
+
+
 @tool
 def search_vocab(query: str, level: int = 0) -> str:
     """Tra từ vựng HSK (chính thức HSK 3.0, 5363 từ, level 1-6).
@@ -244,7 +280,8 @@ class AgentState(TypedDict):
     messages: Annotated[list, add_messages]
 
 
-tools = [pinyin_chart, get_stroke_order, get_radical_info, search_poem, search_vocab, hsk_wordlist]
+tools = [pinyin_chart, get_stroke_order, get_radical_info, search_poem,
+         search_vocab, hsk_wordlist, search_grammar, grammar_topics]
 llm_with_tools = llm.bind_tools(tools)
 
 
