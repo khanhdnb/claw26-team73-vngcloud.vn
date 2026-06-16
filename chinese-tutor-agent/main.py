@@ -19,6 +19,8 @@ from greennode_agentbase import (
     PingStatus,
 )
 
+import poetry
+
 load_dotenv()
 
 app = GreenNodeAgentBaseApp()
@@ -84,6 +86,17 @@ Pinyin + bộ thủ được nhắc lại xuyên suốt.
 
 Chủ đề: Chào hỏi → Gia đình → Số đếm/ngày giờ → Mua sắm → Giao thông → Thời tiết → Công việc
 
+### MODULE 5 — Thơ ca & Kinh điển (nâng cao, HSK4+)
+Dành cho người học khá, muốn tiếp cận văn học cổ điển Hán văn.
+Kho có sẵn: **Thi Kinh (诗经)**, **Luận Ngữ (论语)**, **Đường Thi 300 bài (唐诗三百首)**, **Tam Tự Kinh (三字经)**.
+Khi user hỏi về một bài thơ / câu thơ / tác giả → **GỌI tool `search_poem`** để lấy nguyên văn, ĐỪNG tự bịa.
+Sau khi có nguyên văn, giúp người học:
+1. **Nguyên văn** chữ Hán
+2. **Phiên âm** pinyin từng câu
+3. **Dịch nghĩa** tiếng Việt
+4. **Từ vựng/điển tích** đáng chú ý + bộ thủ liên quan
+Luôn nhắc lại pinyin + bộ thủ (xuyên suốt như các module khác).
+
 ## PHÁT HIỆN TRÌNH ĐỘ
 Khi user bắt đầu, hỏi 2 câu:
 1. "Bạn đã học tiếng Trung chưa? Biết khoảng bao nhiêu chữ?"
@@ -116,6 +129,24 @@ def get_stroke_order(character: str) -> str:
 
 
 @tool
+def search_poem(query: str) -> str:
+    """Tra cứu thơ ca / kinh điển Hán văn cổ (Thi Kinh, Luận Ngữ, Đường Thi 300 bài, Tam Tự Kinh).
+
+    Dùng khi user hỏi về một bài thơ, một câu thơ, hoặc thơ của một tác giả cụ thể.
+    query có thể là: tên bài (vd '静夜思'), tên tác giả (vd '李白'), hoặc một câu chữ Hán.
+    Hỗ trợ cả phồn thể lẫn giản thể.
+    """
+    results = poetry.search_poems(query, limit=3)
+    if not results:
+        return f"Không tìm thấy bài nào khớp '{query}' trong kho (Thi Kinh, Luận Ngữ, Đường Thi 300, Tam Tự Kinh)."
+    out = []
+    for p in results:
+        body = "\n".join(p["lines"])
+        out.append(f"【{p['title']}】 — {p['author']} ({p['source']})\n{body}")
+    return "\n\n---\n\n".join(out)
+
+
+@tool
 def get_radical_info(radical: str) -> str:
     """Tra thông tin về một bộ thủ (radical) trong tiếng Trung."""
     radicals = {
@@ -139,7 +170,7 @@ class AgentState(TypedDict):
     messages: Annotated[list, add_messages]
 
 
-tools = [get_stroke_order, get_radical_info]
+tools = [get_stroke_order, get_radical_info, search_poem]
 llm_with_tools = llm.bind_tools(tools)
 
 
