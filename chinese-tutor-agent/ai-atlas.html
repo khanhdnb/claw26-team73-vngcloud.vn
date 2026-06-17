@@ -594,24 +594,21 @@ function backBtn(dark, fallback){
 
 /* ===== 01 ONBOARD ===== */
 function scrOnboard(){
+  // Nền = tranh thủy mặc Welcome (đã có mascot MÂY trong ảnh). Overlay tối đậm vùng chữ để nổi.
   return `<div class="scr" style="background:
-      radial-gradient(circle at 85% 8%, rgba(179,58,46,.35), transparent 45%),
-      radial-gradient(circle at 12% 92%, rgba(212,178,122,.22), transparent 45%),
+      linear-gradient(180deg, rgba(34,24,16,.74) 0%, rgba(34,24,16,.58) 22%, rgba(34,24,16,.40) 42%, rgba(34,24,16,.18) 60%, rgba(34,24,16,.55) 100%),
+      url(/posters/welcome.jpg) center/cover no-repeat,
       var(--navy); color:var(--ivory); display:flex; flex-direction:column;
-      min-height:100%; padding:56px 30px 36px; text-align:center; position:relative">
+      min-height:100%; padding:50px 30px 32px; text-align:center; position:relative">
     ${settingsGear(true)}
     <div class="eyebrow eb-gold" style="letter-spacing:8px">A · I</div>
-    <div class="h2" style="font-size:74px; color:var(--ivory); margin-top:4px">ATLAS</div>
-    <div class="han" style="font-size:22px; color:var(--gold); letter-spacing:6px; margin-top:6px">中国之旅</div>
-    <div style="margin-top:40px; font-family:var(--font-disp); font-size:19px; line-height:1.5">
+    <div class="h2" style="font-size:72px; color:var(--ivory); margin-top:2px; text-shadow:0 2px 16px rgba(0,0,0,.5)">ATLAS</div>
+    <div class="han" style="font-size:22px; color:var(--gold); letter-spacing:6px; margin-top:6px; text-shadow:0 1px 8px rgba(0,0,0,.5)">中国之旅</div>
+    <div style="margin-top:30px; font-family:var(--font-disp); font-size:19px; line-height:1.5; text-shadow:0 1px 10px rgba(0,0,0,.6)">
       Read China, don't <span style="font-style:italic;color:var(--gold)">memorize</span> China.</div>
-    <div style="font-size:12px; color:rgba(247,242,234,.6); margin-top:10px">Đừng học thuộc. Hãy giải mã.</div>
-    <div style="flex:1; display:flex; align-items:center; justify-content:center; margin:24px 0">
-      <div style="width:170px; height:170px; border-radius:50%;
-        background:radial-gradient(circle, rgba(212,178,122,.30), transparent 65%);
-        display:flex; align-items:center; justify-content:center; font-size:96px">${MAY('default')}</div>
-    </div>
-    <div class="eyebrow eb-gold" style="margin-bottom:14px">Người dẫn đường của bạn · MÂY</div>
+    <div style="font-size:12px; color:rgba(247,242,234,.75); margin-top:10px; text-shadow:0 1px 6px rgba(0,0,0,.6)">Đừng học thuộc. Hãy giải mã.</div>
+    <div style="flex:1"></div>
+    <div class="eyebrow eb-gold" style="margin-bottom:14px; text-shadow:0 1px 6px rgba(0,0,0,.6)">Người dẫn đường của bạn · MÂY</div>
     <button class="btn btn-gold" onclick="go('citypick')">Bắt đầu hành trình →</button>
   </div>`;
 }
@@ -622,7 +619,7 @@ function scrCityPick(){
     const c=CITIES[k]; const p=S.cityProgress[k]||0;
     const status = S.collected.has(k)?'In progress':(p>0?'In progress':'Chưa đặt chân');
     return `<div onclick="pickCity('${k}')" style="position:relative; height:140px; cursor:pointer;
-        background:${POSTER(k)}; background-size:cover; background-position:center; margin-bottom:1px;
+        background:${POSTER(k)}; margin-bottom:1px;
         display:flex; align-items:flex-end">
       <div style="position:absolute; inset:0; background:linear-gradient(transparent 30%, rgba(13,23,38,.85))"></div>
       <div style="position:relative; display:flex; justify-content:space-between; align-items:flex-end; width:100%; padding:16px">
@@ -747,7 +744,7 @@ function scrAtlas(){
     <!-- HERO · current city (main focus) -->
     <div class="pad" style="margin-top:18px">
       <div class="eyebrow eb-red">★ Thành phố hiện tại</div>
-      <div onclick="go('citydetail')" style="position:relative; height:200px; cursor:pointer; background:${POSTER(S.city)}; background-size:cover; background-position:center; margin-top:8px; display:flex; align-items:flex-end; overflow:hidden">
+      <div onclick="go('citydetail')" style="position:relative; height:200px; cursor:pointer; background:${POSTER(S.city)}; margin-top:8px; display:flex; align-items:flex-end; overflow:hidden">
         <div style="position:absolute; inset:0; background:linear-gradient(transparent 30%, rgba(13,23,38,.92))"></div>
         <div style="position:absolute; top:14px; right:14px; background:var(--red); color:var(--ivory); font-size:10px; font-weight:700; padding:4px 10px; letter-spacing:1.5px">${curProg}%</div>
         <div style="position:relative; padding:18px; width:100%">
@@ -786,7 +783,7 @@ function scrCityDetail(){
   const strokes=8;
   return `<div class="scr" style="position:relative">
     ${backBtn(true,'atlas')}
-    <div style="position:relative; height:320px; background:${POSTER(S.city)}; background-size:cover; background-position:center; display:flex; align-items:flex-end">
+    <div style="position:relative; height:320px; background:${POSTER(S.city)}; display:flex; align-items:flex-end">
       <div style="position:absolute; inset:0; background:linear-gradient(transparent 20%, rgba(13,23,38,.92))"></div>
       <div style="position:relative; padding:24px">
         <div class="eyebrow eb-gold">Bài học hôm nay</div>
@@ -820,7 +817,7 @@ function compGraph(rads,chars){
 /* ===== 06 LESSON ===== */
 function scrLessonShell(){
   const c=CITIES[S.city]||CITIES.chengdu;
-  return `<div class="scr" style="background:${POSTER(S.city)}; background-size:cover; background-position:center; min-height:100%; position:relative; color:var(--ivory)">
+  return `<div class="scr" style="background:${POSTER(S.city)}; min-height:100%; position:relative; color:var(--ivory)">
     <div style="position:absolute; inset:0; background:linear-gradient(rgba(13,23,38,.55), rgba(13,23,38,.95))"></div>
     <div style="position:relative; padding:24px; min-height:100%; display:flex; flex-direction:column">
       ${backBtn(true,'atlas')}
@@ -1339,6 +1336,7 @@ render();
 
 /* ===== POSTER backgrounds (CSS gradient stand-ins; designer thay ảnh thật sau) ===== */
 function POSTER(k){
+  // Gradient nền (fallback khi ảnh chưa load / lỗi) — giữ tông từng thành phố
   const g={
     chengdu:"radial-gradient(ellipse at 50% 24%, #C8503A 0%, #9F3B2E 34%, #5e2418 72%, #2A1810 100%)",
     shanghai:"linear-gradient(180deg, #2c3b52 0%, #3f5876 38%, #d98f5a 70%, #7a4a2c 88%, #2a1810 100%)",
@@ -1347,7 +1345,9 @@ function POSTER(k){
     xian:"linear-gradient(180deg, #E2BC7C 0%, #b9823f 44%, #7a4e26 76%, #3a2414 100%)",
     guilin:"linear-gradient(180deg, #bdd1b6 0%, #6f9a78 36%, #3f6b54 68%, #213f30 100%)"
   };
-  return g[k]||g.chengdu;
+  const grad=g[k]||g.chengdu;
+  // Ảnh poster THẬT chồng lên gradient (ảnh hiển thị trên, gradient là fallback)
+  return `url(/posters/${k}.jpg) center/cover, ${grad}`;
 }
 
 </script>

@@ -384,6 +384,20 @@ async def serve_mascot(request: Request):
     return PlainTextResponse("mascot not found", status_code=404)
 
 
+_POSTERS_DIR = os.path.join(_HERE, "data", "posters")
+_ALLOWED_POSTERS = {"welcome", "chengdu", "shanghai", "beijing", "hangzhou", "xian", "guilin"}
+
+
+async def serve_poster(request: Request):
+    # Ảnh nền/poster (welcome onboard + 6 city posters)
+    name = request.path_params.get("name", "")
+    if name in _ALLOWED_POSTERS:
+        path = os.path.join(_POSTERS_DIR, f"{name}.jpg")
+        if os.path.exists(path):
+            return FileResponse(path, media_type="image/jpeg")
+    return PlainTextResponse("poster not found", status_code=404)
+
+
 # --- AI ATLAS: sinh câu i+1 qua qwen (có validator + fallback) ---
 async def lesson_endpoint(request: Request):
     """
@@ -448,6 +462,7 @@ app.add_route("/", serve_atlas_ui, methods=["GET"])
 app.add_route("/atlas", serve_atlas_ui, methods=["GET"])
 app.add_route("/chat", serve_chat_ui, methods=["GET"])
 app.add_route("/may-mascot.png", serve_mascot, methods=["GET"])
+app.add_route("/posters/{name}", serve_poster, methods=["GET"])
 app.add_route("/lesson", lesson_endpoint, methods=["POST"])
 
 
