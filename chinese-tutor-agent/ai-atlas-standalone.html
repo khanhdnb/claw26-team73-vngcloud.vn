@@ -614,18 +614,15 @@ function scrOnboard(){
 /* ===== 02 CITY PICK ===== */
 function scrCityPick(){
   const cards = CITY_ORDER.map(k=>{
-    const c=CITIES[k]; const p=S.cityProgress[k]||0;
-    const status = S.collected.has(k)?'In progress':(p>0?'In progress':'Chưa đặt chân');
+    const c=CITIES[k];
     return `<div onclick="pickCity('${k}')" style="position:relative; height:140px; cursor:pointer;
         background:${POSTER(k)}; margin-bottom:1px;
         display:flex; align-items:flex-end">
       <div style="position:absolute; inset:0; background:linear-gradient(transparent 30%, rgba(13,23,38,.85))"></div>
-      <div style="position:relative; display:flex; justify-content:space-between; align-items:flex-end; width:100%; padding:16px">
-        <div><div class="han" style="color:var(--gold); font-size:34px; line-height:1">${c.cn}</div>
-          <div class="h2" style="font-size:20px; color:var(--ivory); margin-top:4px; letter-spacing:1px">${c.name}</div>
-          <div style="font-size:13px; color:rgba(247,242,234,.8); margin-top:2px">${c.nameVi||c.name}</div></div>
-        <div style="text-align:right"><div class="h2" style="color:var(--gold); font-size:22px">${p}%</div>
-          <div style="font-size:8px; color:rgba(247,242,234,.6); text-transform:uppercase">${status}</div></div>
+      <div style="position:relative; width:100%; padding:16px">
+        <div class="han" style="color:var(--gold); font-size:34px; line-height:1">${c.cn}</div>
+        <div class="h2" style="font-size:20px; color:var(--ivory); margin-top:4px; letter-spacing:1px">${c.name}</div>
+        <div style="font-size:13px; color:rgba(247,242,234,.8); margin-top:2px">${c.nameVi||c.name}</div>
       </div></div>`;
   }).join('');
   return `<div class="scr" style="position:relative">
