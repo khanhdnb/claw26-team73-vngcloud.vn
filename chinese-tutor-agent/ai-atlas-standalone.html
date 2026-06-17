@@ -7,11 +7,26 @@
 <style>
 /* ===== DESIGN SYSTEM (ui_brief) ===== */
 :root{
-  --navy:#0D1726; --red:#B33A2E; --gold:#D4B27A; --jade:#2D7466;
-  --ivory:#F7F2EA; --stone:#8E8576; --line:#E8DFD0;
-  --font-disp:"Inter Tight",Inter,-apple-system,system-ui,sans-serif;
-  --font-han:"Noto Serif SC",serif;
-  --font-body:Inter,-apple-system,system-ui,sans-serif;
+  /* ===== AI ATLAS — WARM INK-WASH THEME (giấy cổ + thủy mặc) =====
+     Tên biến giữ nguyên để không phá code. Giá trị đổi sang tông ấm.
+     LƯU Ý: --navy dùng kép (nền tối ẤM + chữ/ink trên nền kem) → chọn
+     nâu-đen ấm #2A2018: vừa đủ tối làm nền, vừa làm ink đậm (11–13:1 trên kem). */
+  --navy:#2A2018;     /* was #0D1726 — warm sepia-black: dark bg + ink trên kem */
+  --red:#A33327;      /* đỏ son Trung Hoa — CTA punchy (giữ độ tươi cho .btn-red) */
+  --gold:#D4B27A;     /* champagne gold (giữ nguyên, vốn đã ấm) */
+  --jade:#456040;     /* was #2D7466 — sage-jade ấm: "đã biết" hợp tông giấy cổ */
+  --ivory:#F4E8D4;    /* was #F7F2EA — kem giấy ấm hơn cho card/light surface */
+  --muted:#5F503D;    /* was #8E8576 — taupe ấm cho secondary text (AA trên kem) */
+  --stone:#5F503D;    /* alias warm taupe (code có thể gọi --stone) */
+  --line:#D8C3A0;     /* was #E8DFD0 — viền giấy cổ ấm */
+
+  /* ===== biến mới (tông ấm mở rộng) ===== */
+  --paper:#B8AC9F;    /* nền giấy có vân (vintage atlas paper) */
+  --paper-kem:#F0DCC2;/* nền kem chính của app (màn sáng) */
+  --paper-kem2:#ECDAC0;/* kem trầm hơn (section/nền phụ) */
+  --ink:#2A2018;      /* = --navy: ink chữ trên nền sáng */
+  --mist:rgba(244,232,212,.55);/* sương thủy mặc (overlay sáng) */
+  --red-soft:#9F5B50; /* đỏ trầm/terracotta cho accent mảng lớn, viền, veil */
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
@@ -106,6 +121,159 @@ body{
 .qz-opt:hover{background:rgba(247,242,234,.10)!important}
 .qz-opt.right{background:rgba(45,116,102,.30)!important; border-color:var(--jade)!important; color:#a8e6d4!important}
 .qz-opt.wrong{background:rgba(179,58,46,.20)!important; border-color:var(--red)!important; color:#f3b8b0!important}
+/* ============================================================
+   AI ATLAS — WARM INK-WASH · EXTRA CSS (append sau CSS gốc)
+   KHÔNG dùng ảnh ngoài. Mọi texture bằng gradient nhiều lớp.
+   ============================================================ */
+
+/* ---- nền trang tổng: kem giấy cổ thay #131017 ---- */
+body{
+  background:
+    radial-gradient(1200px 700px at 90% 0%, rgba(159,91,80,.10), transparent 60%),
+    radial-gradient(900px 500px at 0% 100%, rgba(212,178,122,.14), transparent 60%),
+    var(--paper-kem2) !important;
+  color:var(--ink);
+}
+
+/* =========================================================
+   1. KHUNG ĐIỆN THOẠI — vỏ ấm, viền gold mảnh
+   ========================================================= */
+#phone{
+  background:#1c140d;                 /* vỏ nâu-đen ấm thay #000 */
+  box-shadow:0 30px 60px rgba(42,32,24,.45), 0 0 0 1px rgba(212,178,122,.18);
+}
+#view{ background:var(--paper-kem); } /* khung trong = kem giấy */
+
+/* =========================================================
+   2. MÀN SÁNG (.scr mặc định) — nền giấy có vân
+   ========================================================= */
+.scr{
+  background:
+    linear-gradient(180deg, rgba(255,250,240,.35), rgba(184,172,159,.10)),
+    repeating-linear-gradient(0deg,  rgba(116,100,78,.045) 0 2px, transparent 2px 5px),
+    repeating-linear-gradient(90deg, rgba(116,100,78,.030) 0 3px, transparent 3px 6px),
+    var(--paper-kem);
+  color:var(--ink);
+}
+.scr::after{ /* vệt loang giấy cổ rất nhẹ ở góc */
+  content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(60% 40% at 12% 8%,  rgba(159,91,80,.06), transparent 70%),
+    radial-gradient(50% 35% at 92% 96%, rgba(212,178,122,.10), transparent 72%);
+}
+
+/* =========================================================
+   3. MÀN ONBOARD — TRANH THỦY MẶC (núi mờ + sương + đào hồng)
+   Áp khi .scr có class/biến tối: .scr.onboard, .scr.dark,
+   [data-screen="onboard"], [data-screen="lesson"]
+   ========================================================= */
+.scr.onboard, .scr.dark, .scr.lesson,
+[data-screen="onboard"] .scr, [data-screen="onboard"],
+[data-screen="lesson"]  .scr, [data-screen="lesson"]{
+  color:var(--ivory);
+  background:
+    /* sương sáng trên đỉnh */
+    radial-gradient(120% 46% at 50% 6%,  rgba(244,232,212,.16), transparent 60%),
+    /* quầng gold ấm (mặt trời mờ) */
+    radial-gradient(120% 50% at 78% 24%, rgba(212,178,122,.22), transparent 55%),
+    /* mảng đào hồng phớt (hoa đào) bên trái-dưới */
+    radial-gradient(150% 60% at 20% 70%, rgba(184,120,128,.28), transparent 60%),
+    /* sương trắng-kem dâng từ chân màn */
+    radial-gradient(95% 40% at 50% 102%, rgba(184,172,159,.30), transparent 72%),
+    /* trời chuyển nâu ấm → nâu-đen */
+    linear-gradient(180deg, #3a2a1e 0%, #2A2018 46%, #1c140d 100%);
+}
+/* lớp NÚI MỜ thủy mặc — bóng núi nhiều tầng bằng radial tối + sương */
+.scr.onboard::before, .scr.dark::before, .scr.lesson::before,
+[data-screen="onboard"] .scr::before, [data-screen="lesson"] .scr::before{
+  content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:
+    /* núi gần (tối) trái */
+    radial-gradient(58% 26% at 26% 66%, rgba(20,14,9,.85), transparent 72%),
+    /* núi gần (tối) phải */
+    radial-gradient(66% 30% at 74% 72%, rgba(28,20,13,.82), transparent 70%),
+    /* núi xa mờ (xám-tím nhạt) */
+    radial-gradient(70% 24% at 50% 58%, rgba(120,104,118,.20), transparent 74%),
+    /* dải sương ngang chia tầng núi */
+    linear-gradient(180deg, transparent 52%, rgba(244,232,212,.10) 60%, transparent 68%);
+  mix-blend-mode:screen;opacity:.92;
+}
+/* nội dung onboard nổi trên 2 lớp tranh */
+.scr.onboard > *, .scr.lesson > *, .scr.dark > *,
+[data-screen="onboard"] .scr > *, [data-screen="lesson"] .scr > *{ position:relative; z-index:2; }
+
+/* =========================================================
+   4. STATUSBAR / TABBAR — hợp tông ấm
+   ========================================================= */
+#statusbar{ color:var(--ink); }
+.scr.onboard #statusbar, .scr.dark #statusbar, .scr.lesson #statusbar,
+[data-screen="onboard"] #statusbar, [data-screen="lesson"] #statusbar{ color:var(--ivory); }
+
+#tabbar{
+  background:
+    linear-gradient(180deg, rgba(255,250,240,.6), rgba(240,220,194,.92)),
+    var(--paper-kem);
+  border-top:1px solid var(--line);
+  color:var(--muted);
+  backdrop-filter:saturate(1.05);
+}
+#tabbar .active, #tabbar [aria-selected="true"], #tabbar .on{
+  color:var(--red);                    /* tab active = đỏ son */
+}
+
+/* =========================================================
+   5. BUTTONS — đỏ son nổi + gold dập nổi (ấm, có chiều sâu)
+   ========================================================= */
+.btn-red{
+  background:linear-gradient(180deg, #C0463A, var(--red));
+  color:var(--ivory);
+  border:1px solid rgba(110,40,30,.5);
+  box-shadow:0 6px 18px rgba(159,91,80,.32), inset 0 1px 0 rgba(255,255,255,.12);
+}
+.btn-red:active{ transform:translateY(1px); box-shadow:0 3px 10px rgba(159,91,80,.30); }
+
+.btn-gold{
+  background:linear-gradient(180deg, #E2C58E, var(--gold));
+  color:var(--navy);                   /* navy=ink ấm trên gold → 7.9:1 */
+  border:1px solid rgba(154,122,63,.55);
+  box-shadow:0 6px 16px rgba(212,178,122,.30), inset 0 1px 0 rgba(255,255,255,.35);
+}
+.btn-gold:active{ transform:translateY(1px); }
+
+/* nút ghost/outline trên kem */
+.btn-ghost, .btn-outline{
+  background:transparent;color:var(--ink);border:1px solid var(--ink);
+}
+
+/* =========================================================
+   6. EYEBROW · HÁN · H2 — chữ Hán đỏ son, headline serif ấm
+   ========================================================= */
+.eyebrow{ color:var(--red); letter-spacing:2px; text-transform:uppercase; }
+.scr.onboard .eyebrow, .scr.lesson .eyebrow{ color:var(--gold); } /* trên nền tối → gold */
+
+.han{
+  font-family:'Noto Serif SC', serif;
+  color:var(--red);                    /* chữ Hán đỏ son trên kem */
+  letter-spacing:6px;
+}
+.scr.onboard .han, .scr.lesson .han, .scr.dark .han{ color:var(--gold); } /* trên nền tối → gold */
+
+.h2{ color:var(--ink); letter-spacing:-.5px; }
+.scr.onboard .h2, .scr.lesson .h2, .scr.dark .h2{ color:var(--ivory); }
+
+/* trạng thái chữ: đã biết (jade ấm) / chữ mới i+1 (gold) — đồng bộ tông */
+.han .known, .char.known{ color:var(--jade); border-bottom:3px solid var(--jade); }
+.han .new,   .char.new{   color:var(--gold); border-bottom:3px dotted var(--gold); }
+
+/* =========================================================
+   7. CITY CARD VEIL — đổi navy-veil sang nâu ấm
+   ========================================================= */
+.citytag .veil, .citycard .veil, .poster .veil{
+  background:linear-gradient(180deg, transparent 28%, rgba(28,20,13,.92));
+}
+
+/* viền/đường kẻ trang trí dùng tông ấm */
+hr, .divider, .ln{ background:var(--line); border-color:var(--line); }
 </style>
 </head>
 <body>
@@ -1174,12 +1342,12 @@ render();
 /* ===== POSTER backgrounds (CSS gradient stand-ins; designer thay ảnh thật sau) ===== */
 function POSTER(k){
   const g={
-    chengdu:'linear-gradient(135deg,#4a1815,#8e2820 60%,#0D1726)',
-    shanghai:'linear-gradient(135deg,#0D1726,#1a3550 60%,#2a3a4a)',
-    beijing:'linear-gradient(135deg,#3a2e1f,#5a4630 60%,#0D1726)',
-    hangzhou:'linear-gradient(135deg,#1a3a3a,#2D7466 60%,#0D1726)',
-    xian:'linear-gradient(135deg,#5a3a1a,#8a5a2a 60%,#0D1726)',
-    guilin:'linear-gradient(135deg,#1f4438,#2D7466 60%,#0D1726)'
+    chengdu:"radial-gradient(ellipse at 50% 24%, #C8503A 0%, #9F3B2E 34%, #5e2418 72%, #2A1810 100%)",
+    shanghai:"linear-gradient(180deg, #2c3b52 0%, #3f5876 38%, #d98f5a 70%, #7a4a2c 88%, #2a1810 100%)",
+    beijing:"linear-gradient(180deg, #C9A14E 0%, #9c6f33 42%, #6e4a26 72%, #3a2414 100%)",
+    hangzhou:"linear-gradient(180deg, #d3e2d1 0%, #7fae9a 38%, #3f7d72 70%, #234c46 100%)",
+    xian:"linear-gradient(180deg, #E2BC7C 0%, #b9823f 44%, #7a4e26 76%, #3a2414 100%)",
+    guilin:"linear-gradient(180deg, #bdd1b6 0%, #6f9a78 36%, #3f6b54 68%, #213f30 100%)"
   };
   return g[k]||g.chengdu;
 }
