@@ -306,7 +306,9 @@ function loadState(){
   try{ const r=JSON.parse(localStorage.getItem('aiatlas_state')); if(!r) return;
     S.city=r.city; S.known=new Set(r.known||[]); S.cityProgress=r.cityProgress||S.cityProgress;
     S.collected=new Set(r.collected||[]); S.streak=r.streak??7; S.xp=r.xp??1240;
-    S.decodeIdx=r.decodeIdx||0; S.current=r.current||'onboard';
+    S.decodeIdx=r.decodeIdx||0;
+    // KHÔNG khôi phục S.current — luôn mở vào Onboarding (giữ tiến độ học đã lưu).
+    // (deep-link qua hash applyHash() vẫn override được nếu cần)
   }catch(e){}
 }
 function saveState(){
